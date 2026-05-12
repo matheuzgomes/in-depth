@@ -1,0 +1,150 @@
+import { setMembershipSimulation } from "@/data/simulations"
+
+Sets are hash tables specialized for uniqueness, membership, and algebra. Dictionary views let you perform similar set-style reasoning over keys and items without materializing a separate set first.
+
+<SLabel>Core answer</SLabel>
+
+Use a `set` when the real operation is repeated membership testing or set algebra: union, intersection, difference, subset, or superset.
+
+```python
+# Works on Python 3.x
+blocked = {"root", "admin", "system"}
+
+def allowed(username):
+    return username not in blocked
+
+print(allowed("ana"))
+```
+
+On this machine, local `timeit` measurements over a `10000`-element collection showed the scale of the difference:
+
+- `9999 in list(range(10000))` repeated `10000` times: about `0.595` seconds
+- `9999 in set(range(10000))` repeated `10000` times: about `0.000236` seconds
+
+Those exact times are not portable. The stable lesson is the algorithmic one: list membership is linear scan, set membership is average-case hash lookup.
+
+<SetMembershipSimulation data={setMembershipSimulation} />
+
+<SLabel>Mechanism and memory cost</SLabel>
+
+Sets are hash tables without associated values. The same hashability rules that govern dict keys govern set elements.
+
+```python
+# Works on Python 3.x
+role = frozenset({"read", "write"})
+permissions = {role: "editor"}
+print(permissions[role])
+```
+
+Because sets are hash tables, they also reserve significant extra memory to protect lookup speed. Local CPython 3.12.3 measurements with `sys.getsizeof` show stepped growth:
+
+- empty set: `216` bytes
+- `1` to `4` elements: `216` bytes
+- `5` to `16` elements: `728` bytes
+- `32` to `64` elements: `2264` bytes
+
+```python
+# Works on Python 3.x
+# Example byte counts below were measured on CPython 3.12.3, 64-bit Linux.
+import sys
+
+for n in (0, 1, 4, 5, 16, 32):
+    s = set(range(n))
+    print(n, sys.getsizeof(s))
+```
+
+That overhead is the price of near-constant-time membership.
+
+<SLabel>Set algebra and API edges</SLabel>
+
+Sets support the expected algebra directly:
+
+```python
+# Works on Python 3.x
+requested = {"read", "write", "delete"}
+granted = {"read", "write"}
+
+print(requested - granted)
+print(requested <= granted)
+print(requested & granted)
+```
+
+Operator forms such as `|`, `&`, and `-` on actual `set` objects expect set operands. If the right-hand side is a general iterable, use methods such as `.union()` or `.intersection()`.
+
+```python
+# Works on Python 3.x
+print({"a", "b"}.intersection(["b", "c"]))
+```
+
+<SLabel>Dictionary views</SLabel>
+
+`dict.keys()`, `dict.items()`, and `dict.values()` return dynamic view objects over the underlying dictionary. They are not materialized lists, and they update when the dictionary changes.
+
+```python
+# Works on Python 3.x
+data = {"a": 1}
+keys = data.keys()
+data["b"] = 2
+print(list(keys))
+```
+
+Key views are set-like because keys are unique and hashable. Item views are also set-like when their `(key, value)` pairs are hashable. Values views are not set-like because values are not generally unique.
+
+```python
+# Works on Python 3.x
+expected = {"id", "email", "role"}
+payload = {"id": 1, "email": "a@example.com", "debug": True}
+
+missing = expected - payload.keys()
+extra = payload.keys() - expected
+
+print(missing, extra)
+```
+
+One subtle but important distinction from ordinary sets: the official docs note that set-like dictionary views accept **any iterable** as the other operand for set operators. That makes view algebra surprisingly ergonomic.
+
+```python
+# Works on Python 3.x
+d = {"a": 1, "b": 2}
+print(d.keys() | ["b", "c", "c"])
+```
+
+<SLabel>Version context</SLabel>
+
+Set types and dictionary views are stable Python 3 features. Dictionary insertion order is guaranteed in Python 3.7+. Dictionary views became reversible in Python 3.8. The `.mapping` attribute on views was added in Python 3.10. Python 3.9 and below are End-of-Life.
+
+<SLabel>Edge cases and gotchas</SLabel>
+
+Set iteration order is not a sorting contract. It can vary across runs and table states. If output order matters, sort explicitly.
+
+```python
+# Works on Python 3.x
+names = {"zoe", "ana", "bo"}
+print(sorted(names))
+```
+
+`frozenset` is immutable and hashable, but that does not make it ordered. It is for stable membership sets, not for sequence semantics.
+
+<Callout type="info">
+  If you only need key comparisons, use dictionary views directly. Building a separate set of keys first often adds allocation without adding meaning.
+</Callout>
+
+<SLabel>Production usage</SLabel>
+
+Use sets for:
+
+- blocklists and allowlists
+- schema comparison
+- permission algebra
+- deduplication when order does not matter
+
+Use `dict.keys()` and `dict.items()` views for live schema and key-delta checks against dictionaries that may continue to evolve during processing.
+
+When each key needs associated data, move back to dictionaries; see <CardRef id="dict-hash-tables" />.
+
+<SLabel>Further depth</SLabel>
+
+- [Set types: set and frozenset](https://docs.python.org/3/library/stdtypes.html#set-types-set-frozenset)
+- [Dictionary view objects](https://docs.python.org/3/library/stdtypes.html#dictionary-view-objects)
+- [Data model: object.__hash__](https://docs.python.org/3/reference/datamodel.html#object.__hash__)
+- [sys.getsizeof](https://docs.python.org/3/library/sys.html#sys.getsizeof)

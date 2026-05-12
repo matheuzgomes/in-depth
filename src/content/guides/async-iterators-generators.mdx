@@ -1,0 +1,171 @@
+import { asyncIterationTimelineData } from "@/data/simulations"
+
+This guide covers the chapter-21 language constructs beyond plain `await`: asynchronous iteration, async iterables, async generator functions, async comprehensions, and async generator expressions.
+
+<SLabel>Core answer</SLabel>
+
+Async iteration is for streams whose next value may require waiting.
+
+- `async for` consumes an async iterable
+- async generator functions use `async def` plus `yield`
+- async comprehensions and async generator expressions make async data pipelines concise
+
+The key point is still cooperative suspension: each next item may require `await`.
+
+```python
+# Requires Python 3.6+ [PEP 525]
+import asyncio
+
+async def ticker():
+    for value in (1, 2, 3):
+        await asyncio.sleep(0.1)
+        yield value
+```
+
+<AsyncTimelineLab data={asyncIterationTimelineData} />
+
+<SLabel>Asynchronous iteration and async iterables</SLabel>
+
+An async iterable is an object that supports asynchronous iteration. The consumer uses `async for`, and each step may suspend.
+
+```python
+# Requires Python 3.6+ [PEP 492]
+import asyncio
+
+async def main():
+    async for item in ticker():
+        print(item)
+
+asyncio.run(main())
+```
+
+The important semantic difference from ordinary iteration is that "give me the next item" is not assumed to be immediate. It may involve:
+
+- waiting on network input
+- waiting on a timer
+- waiting on upstream producer readiness
+
+<SLabel>Async generator functions</SLabel>
+
+An async generator function mixes:
+
+- `async def`
+- `yield`
+
+That makes it the async counterpart of a regular generator function.
+
+```python
+# Requires Python 3.6+ [PEP 525]
+import asyncio
+
+async def ticker():
+    for value in (1, 2, 3):
+        await asyncio.sleep(0.1)
+        yield value
+```
+
+This is not just syntax sugar. The function expresses a stream whose production steps may suspend between items.
+
+That is why async generators are natural for:
+
+- paginated network streams
+- incremental protocol frames
+- event feeds
+- backpressure-aware producers
+
+<SLabel>Async comprehensions and generator expressions</SLabel>
+
+Async comprehensions and async generator expressions let you write compact transformations over async sources.
+
+```python
+# Requires Python 3.6+ [PEP 530]
+import asyncio
+
+async def collect_even():
+    return [value async for value in ticker() if value % 2 == 0]
+
+print(asyncio.run(collect_even()))
+```
+
+Like ordinary comprehensions, they are expressive. Unlike ordinary comprehensions, the source side can suspend between values.
+
+This makes them good for:
+
+- small async filtering steps
+- local async transformations
+- concise stream adaptation near the consumer
+
+They are not automatically the best choice for deeply stateful pipelines or complicated error handling. At that point, an explicit loop often reads better.
+
+<SLabel>Mechanism and protocol view</SLabel>
+
+The relevant language constructs are:
+
+- `async for`
+- `async def` with `yield`
+- async comprehensions
+
+Under the hood, Python is working with asynchronous iteration protocols instead of ordinary `__iter__` / `__next__`.
+
+That distinction matters because the chapter is not "iteration, but with new keywords." The chapter is about protocols that allow **waiting** between iteration steps.
+
+This also connects to the synchronous iteration guide:
+
+- regular iterables: <CardRef id="memory-iterables" />
+- async iterables: this guide
+
+The conceptual bridge is useful: both are pull-driven from the consumer side, but only one side can suspend between pulls.
+
+<SLabel>Version context</SLabel>
+
+Current project guidance targets Python 3.10-3.14. Python 3.9 and below are End-of-Life.
+
+Version-sensitive points:
+
+- async/await syntax: Python 3.5+ [PEP 492]
+- async generators: Python 3.6+ [PEP 525]
+- async comprehensions and async generator expressions: Python 3.6+ [PEP 530]
+
+Because these features are older than the supported project range, they are stable baseline material for this repo.
+
+<SLabel>Edge cases and gotchas</SLabel>
+
+`async for` does not imply parallel consumption. It means the loop may await each next item.
+
+Async generators are still one stream of values, not an implicit task farm.
+
+Async comprehensions are concise, but they still execute under the same event-loop and cancellation rules as any other async code.
+
+<Callout type="warn">
+  If the source blocks the event-loop thread internally, wrapping it in an async iterator does not rescue it. Async iteration is only as cooperative as the producer behind it.
+</Callout>
+
+<SLabel>Production usage</SLabel>
+
+Use async generators when:
+
+- values arrive over time
+- waiting between items is normal
+- the consumer should process incrementally rather than after full materialization
+
+Use async comprehensions when:
+
+- the transformation is local and clear
+- you want to keep stream handling compact
+
+Use explicit loops when:
+
+- cancellation, retries, and cleanup need to be obvious
+- error handling is nontrivial
+- pipeline state is more important than concision
+
+For the broader async scheduling model beneath these constructs, see <CardRef id="async-foundations-awaitables" />.
+
+<SLabel>Further depth</SLabel>
+
+- [Language reference: async for statement](https://docs.python.org/3/reference/compound_stmts.html#the-async-for-statement)
+- [Language reference: yield expressions](https://docs.python.org/3/reference/expressions.html#yield-expressions)
+- [PEP 492: Coroutines with async and await syntax](https://peps.python.org/pep-0492/)
+- [PEP 525: Asynchronous Generators](https://peps.python.org/pep-0525/)
+- [PEP 530: Asynchronous Comprehensions](https://peps.python.org/pep-0530/)
+- [Fluent Python, 2nd Edition, Chapter 21](https://www.oreilly.com/library/view/fluent-python-2nd/9781492056348/ch21.html)

@@ -1,0 +1,21 @@
+Slices are half-open by design: `stop` is excluded, lengths are easy to compute, and adjacent ranges line up without off-by-one glue.
+
+```python
+record = "SKU-0012:BR:active"
+sku = slice(0, 8)
+country = slice(9, 11)
+
+record[sku], record[country]  # ('SKU-0012', 'BR')
+```
+
+<VerdictGrid items={[
+  { name: "Half-open slice", value: "stop - start", sub: "length is mechanical", good: true },
+  { name: "Named slice", value: "domain label", sub: "beats magic indexes", good: true },
+  { name: "list[:]", value: "copy", sub: "may allocate full list", good: false }
+]} />
+
+<Callout type="tip">
+  Slicing clarity compounds with <CardRef id="sequences-pattern-matching" /> when parsing records from external systems.
+</Callout>
+
+<GuideLink id="sequences-slicing" />

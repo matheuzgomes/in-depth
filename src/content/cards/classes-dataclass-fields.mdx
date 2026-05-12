@@ -1,0 +1,19 @@
+`@dataclass` generates methods from annotations, but field options decide mutability, ordering, defaults, and initialization flow.
+
+```python
+# Works on Python 3.7+
+from dataclasses import dataclass, field
+
+@dataclass(frozen=True, order=True)
+class Job:
+    priority: int
+    tags: list[str] = field(default_factory=list)
+
+print(Job(1))
+```
+
+<Callout type="warn">
+  Use <code>default_factory</code> for mutable field defaults. It solves the same shared-state trap as function defaults.
+</Callout>
+
+<GuideLink id="classes-dataclass-fields" />

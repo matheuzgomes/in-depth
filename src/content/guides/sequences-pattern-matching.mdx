@@ -1,0 +1,134 @@
+import { patternMatchingSimulation } from "@/data/simulations"
+
+Sequence pattern matching is structural dispatch. It is useful when the first question is "what shape is this object?" rather than "which boolean predicate is true?"
+
+<SLabel>Core answer</SLabel>
+
+Use `match` when you want one branch to both validate a shape and bind names from it. The feature was introduced in Python 3.10 and specified by [PEP 634](https://peps.python.org/pep-0634/).
+
+```python
+# Requires Python 3.10+ [PEP 634]
+def handle(command: list[str]):
+    match command:
+        case ["move", x, y]:
+            return ("move", float(x), float(y))
+        case ["rotate", degrees]:
+            return ("rotate", int(degrees))
+        case ["stop"]:
+            return ("stop",)
+        case _:
+            raise ValueError(f"unknown command: {command!r}")
+```
+
+The gain is locality: length checks, literal tests, unpacking, and guards all live in one branch instead of being spread across `if` chains and index reads.
+
+<PatternMatchingSimulation data={patternMatchingSimulation} />
+
+<SLabel>Mechanism and bytecode</SLabel>
+
+Patterns are tried top to bottom. A successful branch may:
+
+- verify that the subject is a compatible sequence
+- check fixed or variable length
+- compare literal components
+- bind names
+- then apply a guard
+
+On current CPython, this is visible in dedicated bytecode such as `MATCH_SEQUENCE`, `GET_LEN`, and `UNPACK_SEQUENCE`.
+
+```python
+# Requires Python 3.10+ [PEP 634]
+import dis
+
+def classify(x):
+    match x:
+        case [a, b]:
+            return a + b
+        case _:
+            return None
+
+dis.dis(classify)
+```
+
+That bytecode detail is CPython-specific. The portable contract is the language definition in the match statement docs and PEPs.
+
+Variable-length patterns use starred captures, which behave like structural unpacking, not regex repetition.
+
+```python
+# Requires Python 3.10+ [PEP 634]
+def parse_row(row):
+    match row:
+        case [name, email, *tags]:
+            return {"name": name, "email": email, "tags": tags}
+        case _:
+            raise ValueError("expected at least name and email")
+
+print(parse_row(["Ana", "a@example.com", "admin", "billing"]))
+```
+
+<SLabel>What counts as a sequence pattern</SLabel>
+
+Sequence patterns are for actual sequence-like subjects. They do not treat `str`, `bytes`, or `bytearray` as sequences of characters or bytes for matching, even though those objects are iterable.
+
+```python
+# Requires Python 3.10+ [PEP 634]
+def route(line: str):
+    match line.split():
+        case ["GET", path]:
+            return ("read", path)
+        case ["POST", path]:
+            return ("write", path)
+        case _:
+            raise ValueError("unsupported request line")
+```
+
+That rule prevents accidental character-by-character matches on text payloads, which would be error-prone at application boundaries.
+
+<SLabel>Version context</SLabel>
+
+`match` and `case` are soft keywords in Python 3.10+. Python 3.9 and below are End-of-Life and do not support this syntax.
+
+```python
+# Requires Python 3.10+ [PEP 634]
+match = "ordinary name outside a match statement"
+case = "also ordinary here"
+print(match, case)
+```
+
+The bytecode names shown in this guide are CPython details. The matching semantics are the language guarantee.
+
+<SLabel>Edge cases and gotchas</SLabel>
+
+Name captures are not value comparisons unless you use literals, guards, or dotted names. A bare name inside a pattern captures; it does not compare against an existing local variable.
+
+Guards run only after the structural pattern matches. Keep them pure and cheap. They are part of branch selection, not a place for side effects.
+
+```python
+# Requires Python 3.10+ [PEP 634]
+def classify(point):
+    match point:
+        case [0, 0]:
+            return "origin"
+        case [x, y] if x == y:
+            return "diagonal"
+        case [x, y]:
+            return "point"
+        case _:
+            raise TypeError("expected a two-item sequence")
+```
+
+<Callout type="warn">
+  Pattern matching is not boundary validation. Decode JSON, enforce required keys, and normalize untrusted inputs before depending on structural branches for business logic.
+</Callout>
+
+<SLabel>Production usage</SLabel>
+
+Use sequence patterns for command decoding, token streams, parser outputs, and small structural protocols. Use ordinary `if` statements for simple boolean predicates. Use function signatures when the public API should reject invalid shapes before your implementation logic begins; see <CardRef id="language-parameters" />.
+
+<SLabel>Further depth</SLabel>
+
+- [Language reference: the match statement](https://docs.python.org/3/reference/compound_stmts.html#the-match-statement)
+- [PEP 634: Structural Pattern Matching - Specification](https://peps.python.org/pep-0634/)
+- [PEP 635: Motivation and Rationale](https://peps.python.org/pep-0635/)
+- [PEP 636: Tutorial](https://peps.python.org/pep-0636/)
+- [dis module](https://docs.python.org/3/library/dis.html)

@@ -1,0 +1,420 @@
+import { containerComparisonLabData } from "@/data/simulations"
+
+This is the top-level container choice guide for `list`, `tuple`, `set`, and `array.array`. The right question is not "which one is fastest?" but "which representation matches the workload?" These containers solve different problems, and the memory/performance costs are consequences of those different contracts.
+
+<SLabel>Core answer</SLabel>
+
+Use:
+
+- `list` for general mutable ordered collections
+- `tuple` for fixed-shape ordered records
+- `set` for repeated membership, uniqueness, and algebra
+- `array.array` for dense homogeneous numeric storage
+
+If you pick only by surface syntax, you will miss the real costs:
+
+- `list` and `tuple` are containers of **references to Python objects**
+- `set` is a **hash table**
+- `array.array` is a **packed buffer of C values**
+
+That difference determines memory footprint, mutation shape, and the operations that stay cheap at scale.
+
+```python
+# Works on Python 3.x
+from array import array
+
+ordered = [10, 20, 30]
+record = (10, 20, 30)
+unique = {10, 20, 30}
+packed = array("I", [10, 20, 30])
+
+print(type(ordered), type(record), type(unique), type(packed))
+```
+
+<ContainerComparisonLab data={containerComparisonLabData} />
+
+<SLabel>Decision matrix</SLabel>
+
+<table>
+  <thead>
+    <tr>
+      <th>Container</th>
+      <th>Order</th>
+      <th>Mutation</th>
+      <th>Duplicates</th>
+      <th>Membership model</th>
+      <th>Best fit</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>list</code></td>
+      <td>preserves order</td>
+      <td>mutable</td>
+      <td>allowed</td>
+      <td>linear scan</td>
+      <td>general-purpose work buffer</td>
+    </tr>
+    <tr>
+      <td><code>tuple</code></td>
+      <td>preserves order</td>
+      <td>fixed-size</td>
+      <td>allowed</td>
+      <td>linear scan</td>
+      <td>fixed record / immutable return value</td>
+    </tr>
+    <tr>
+      <td><code>set</code></td>
+      <td>not sequence-style</td>
+      <td>mutable</td>
+      <td>removed</td>
+      <td>average-case hash lookup</td>
+      <td>membership, dedupe, algebra</td>
+    </tr>
+    <tr>
+      <td><code>array.array</code></td>
+      <td>preserves order</td>
+      <td>mutable</td>
+      <td>allowed</td>
+      <td>linear scan</td>
+      <td>dense homogeneous numeric values</td>
+    </tr>
+  </tbody>
+</table>
+
+Two immediate rules are reliable:
+
+- if the dominant question is "`x in container` many times", start from `set`
+- if the dominant problem is "store many numbers with less overhead", start from `array.array`
+
+Everything else is a tradeoff between ordered mutation, fixed shape, and API expectations.
+
+<SLabel>Representation and memory model</SLabel>
+
+`list` and `tuple` are both sequence containers of references. They do **not** store Python integers or floats inline. They store pointers to separate Python objects.
+
+`tuple` is fixed-size. On current CPython, the tuple object contains its header plus its reference slots in one allocation.
+
+`list` is resizable. On current CPython, the list object points to a separately managed reference array, and that array usually has spare capacity so append-heavy code does not reallocate on every push.
+
+`set` is not a sequence at all. It is a hash table specialized for uniqueness and membership. It spends memory on spare buckets because fast lookup is its primary job.
+
+`array.array` is different from all three. It stores raw C values packed side by side under a chosen typecode such as `"I"` or `"d"`. That is why it can be dramatically smaller for dense numeric workloads.
+
+```python
+# Works on Python 3.x
+from array import array
+
+floats = [1.0, 2.0, 3.0]
+packed = array("d", floats)
+
+print(floats)
+print(packed)
+```
+
+The typecode matters because it selects the underlying C representation. For example, `"d"` uses C `double`, and `"I"` uses C `unsigned int`. The exact width comes from the platform C type, which is why typecode details are stdlib API contracts rather than universal byte-count guarantees.
+
+<SLabel>Measured memory proof</SLabel>
+
+The following local measurements were taken on CPython 3.12.3, 64-bit Linux using `sys.getsizeof`. They are useful for cost shape, not for byte-exact invariants across interpreters or builds.
+
+Container-only footprint for representative sizes:
+
+<table>
+  <thead>
+    <tr>
+      <th>Elements</th>
+      <th><code>list(range(n))</code></th>
+      <th><code>tuple(range(n))</code></th>
+      <th><code>set(range(n))</code></th>
+      <th><code>array("I", range(n))</code></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>0</td><td>56 B</td><td>40 B</td><td>216 B</td><td>80 B</td></tr>
+    <tr><td>1</td><td>72 B</td><td>48 B</td><td>216 B</td><td>96 B</td></tr>
+    <tr><td>10</td><td>136 B</td><td>120 B</td><td>728 B</td><td>144 B</td></tr>
+    <tr><td>100</td><td>856 B</td><td>840 B</td><td>8408 B</td><td>488 B</td></tr>
+    <tr><td>1000</td><td>8056 B</td><td>8040 B</td><td>32984 B</td><td>4200 B</td></tr>
+  </tbody>
+</table>
+
+Three things matter here:
+
+1. `tuple` is only modestly smaller than `list` for the same number of references.
+2. `set` is much larger because hash-table spare capacity is part of the design.
+3. `array.array` is unusually compact because the payload is stored inline rather than as separate Python objects.
+
+```python
+# Works on Python 3.x
+# Example byte counts below were measured on CPython 3.12.3, 64-bit Linux.
+import sys
+from array import array
+
+for n in (0, 1, 10, 100, 1000):
+    print(
+        n,
+        sys.getsizeof(list(range(n))),
+        sys.getsizeof(tuple(range(n))),
+        sys.getsizeof(set(range(n))),
+        sys.getsizeof(array("I", range(n))),
+    )
+```
+
+Now compare dense numeric storage instead of container-only size. For `list` and `tuple`, the total includes the container plus one separate Python `float` object per element. For `array('d')`, the `sys.getsizeof` result already includes the raw numeric payload.
+
+<table>
+  <thead>
+    <tr>
+      <th>Workload</th>
+      <th>Local size</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td><code>list</code> with 1000 floats, total</td><td>32056 B</td></tr>
+    <tr><td><code>tuple</code> with 1000 floats, total</td><td>32040 B</td></tr>
+    <tr><td><code>array("d")</code> with 1000 floats, total</td><td>8080 B</td></tr>
+  </tbody>
+</table>
+
+```python
+# Works on Python 3.x
+# Example byte counts below were measured on CPython 3.12.3, 64-bit Linux.
+import sys
+from array import array
+
+n = 1000
+list_total = sys.getsizeof([1.0] * n) + n * sys.getsizeof(1.0)
+tuple_total = sys.getsizeof((1.0,) * n) + n * sys.getsizeof(1.0)
+array_total = sys.getsizeof(array("d", [1.0] * n))
+
+print(list_total)
+print(tuple_total)
+print(array_total)
+```
+
+This is the key memory lesson:
+
+- `tuple` beats `list` by a small container margin
+- `array.array` beats both by eliminating one Python object header per numeric element
+- `set` is usually the wrong answer when compact storage is the real goal
+
+<SLabel>Performance model and measured proof</SLabel>
+
+There is no single winner across operations because the containers are built for different jobs.
+
+Membership over `10000` elements, measured locally with `timeit` over `10000` lookups:
+
+<table>
+  <thead>
+    <tr>
+      <th>Operation</th>
+      <th>Local time</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td><code>9999 in list(range(10000))</code></td><td>0.607 s</td></tr>
+    <tr><td><code>9999 in tuple(range(10000))</code></td><td>0.528 s</td></tr>
+    <tr><td><code>9999 in set(range(10000))</code></td><td>0.000235 s</td></tr>
+    <tr><td><code>9999 in array("I", range(10000))</code></td><td>1.644 s</td></tr>
+  </tbody>
+</table>
+
+The stable lesson is not the exact timing numbers. It is the algorithmic model:
+
+- `list`, `tuple`, and `array.array` answer membership by scanning
+- `set` answers membership by hashing and probing
+
+```python
+# Works on Python 3.x
+import timeit
+from array import array
+
+setup = """
+from array import array
+lst = list(range(10000))
+tpl = tuple(range(10000))
+st = set(range(10000))
+arr = array("I", range(10000))
+"""
+
+for stmt in ("9999 in lst", "9999 in tpl", "9999 in st", "9999 in arr"):
+    print(stmt, timeit.timeit(stmt, setup=setup, number=10000))
+```
+
+That surprising `array.array` result matters in production: packed storage does **not** imply hash-table lookup speed, and it does not automatically imply faster Python-level membership than a list.
+
+Growth and insertion shape differ just as much:
+
+- `list.append()` is the normal builder pattern
+- `tuple` has no in-place append
+- `set.add()` grows a uniqueness index, not an ordered sequence
+- `array.append()` supports right-edge growth but only for values compatible with the chosen typecode
+
+Local append/add timings over `100000` operations:
+
+<table>
+  <thead>
+    <tr>
+      <th>Operation</th>
+      <th>Local time</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td><code>list.append(1)</code></td><td>0.00126 s</td></tr>
+    <tr><td><code>set.add(1)</code></td><td>0.00193 s</td></tr>
+    <tr><td><code>array("I").append(1)</code></td><td>0.00240 s</td></tr>
+  </tbody>
+</table>
+
+For simple iteration, local `sum(...)` timings over `100000` elements and `300` runs were:
+
+<table>
+  <thead>
+    <tr>
+      <th>Operation</th>
+      <th>Local time</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td><code>sum(list(range(100000)))</code></td><td>0.157 s</td></tr>
+    <tr><td><code>sum(tuple(range(100000)))</code></td><td>0.158 s</td></tr>
+    <tr><td><code>sum(set(range(100000)))</code></td><td>0.214 s</td></tr>
+    <tr><td><code>sum(array("I", range(100000)))</code></td><td>0.438 s</td></tr>
+  </tbody>
+</table>
+
+The operational lesson is conservative:
+
+- `list` and `tuple` are strong general Python-level traversal baselines
+- `set` iteration is secondary to membership and uniqueness
+- `array.array` wins on storage density, not automatically on every Python-level loop
+
+<SLabel>Container-by-container guidance</SLabel>
+
+`list`
+
+- choose it when order matters and mutation is normal
+- good for builders, buffers, rows, and API results callers may modify
+- bad when repeated membership checks dominate, or when homogeneous numeric footprint matters more than flexibility
+
+`tuple`
+
+- choose it when the shape is fixed and should stay fixed
+- good for return values, record-like coordinates, and immutable cache keys
+- bad as a work buffer or any collection that needs to grow over time
+
+`set`
+
+- choose it when uniqueness and membership are the point of the structure
+- good for blocklists, dedupe, schema checks, and set algebra
+- bad when you need duplicates, positional meaning, or compact storage
+
+`array.array`
+
+- choose it when every element fits one numeric typecode and dense storage matters
+- good for large numeric buffers and binary file I/O with `.tofile()` / `.fromfile()`
+- bad when you need mixed types, hash-table membership semantics, or the broad API convenience of `list`
+
+```python
+# Works on Python 3.x
+from array import array
+
+def load_sensor_window(readings):
+    return array("d", readings)
+
+def normalize_tags(tags):
+    return set(tags)
+
+def build_pipeline():
+    steps = ["parse", "validate"]
+    steps.append("store")
+    return steps
+
+def parse_header():
+    return ("version", 3, 14)
+```
+
+<SLabel>Version context and guarantees</SLabel>
+
+Current project guidance targets Python 3.10-3.14. Python 3.9 and below are End-of-Life.
+
+Language-level guarantees:
+
+- `list` and `tuple` are ordered sequences
+- `tuple` is immutable as a container
+- `set` requires hashable elements and supports set algebra
+- `array.array` is a standard-library packed homogeneous container defined by typecode
+
+CPython-specific details:
+
+- the exact byte counts shown above
+- list overallocation shape
+- the exact cost steps where sets resize
+- the specific local timings
+
+Do not publish CPython measurements as if they were language guarantees. Use them to understand cost shape, then measure again on the deployment that matters.
+
+<SLabel>Edge cases and production gotchas</SLabel>
+
+`tuple` immutability is shallow. A tuple containing a list is still exposed to inner mutation and is not hashable.
+
+```python
+# Works on Python 3.x
+record = ("batch-1", [])
+record[1].append("row-1")
+print(record)
+
+try:
+    hash(record)
+except TypeError as exc:
+    print(exc)
+```
+
+`set` order is not a sorting contract. It may differ across runs and table states. If output order matters, sort explicitly.
+
+`array.array` is homogeneous. The typecode is a real constraint, not a comment.
+
+```python
+# Works on Python 3.x
+from array import array
+
+values = array("I", [1, 2, 3])
+
+try:
+    values.append("x")
+except TypeError as exc:
+    print(exc)
+```
+
+`sys.getsizeof()` is not recursive. If you forget that, you will underestimate the true cost of object containers and misunderstand why packed storage wins so clearly for numeric data.
+
+<Callout type="warn">
+  A container that is compact for storage can still be the wrong operational structure. <code>array.array</code> is the clearest example: excellent for dense numeric memory, poor as a substitute for set-style membership or general-purpose list ergonomics.
+</Callout>
+
+<SLabel>Production usage</SLabel>
+
+Use this decision rule in order:
+
+1. If uniqueness or repeated membership is the core job, start with `set`.
+2. If the values are homogeneous numbers and memory or binary I/O matters, start with `array.array`.
+3. If the shape is fixed and semantically record-like, start with `tuple`.
+4. Otherwise, start with `list`.
+
+Then refine only when measurement or API semantics justify it.
+
+For deeper internals and adjacent structures:
+
+- see <CardRef id="memory-tuples-lists" /> for the list/tuple layout tradeoff
+- see <CardRef id="sets-membership-views" /> for set behavior and dictionary views
+- see <CardRef id="memory-list-alternatives" /> for `array.array`, `deque`, and `memoryview`
+
+<SLabel>Further depth</SLabel>
+
+- [Sequence types: list, tuple, range](https://docs.python.org/3/library/stdtypes.html#sequence-types-list-tuple-range)
+- [Set types: set and frozenset](https://docs.python.org/3/library/stdtypes.html#set-types-set-frozenset)
+- [array module](https://docs.python.org/3/library/array.html)
+- [sys.getsizeof](https://docs.python.org/3/library/sys.html#sys.getsizeof)
+- [timeit](https://docs.python.org/3/library/timeit.html)
+- [Data model: object.__hash__](https://docs.python.org/3/reference/datamodel.html#object.__hash__)

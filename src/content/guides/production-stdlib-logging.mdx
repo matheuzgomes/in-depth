@@ -1,0 +1,114 @@
+The standard library `logging` package is a hierarchical event pipeline: loggers create records, filters decide what continues, handlers emit, and formatters render. Production logging quality depends less on calling `log.info(...)` and more on understanding propagation, lazy formatting, and failure boundaries.
+
+<SLabel>Core answer</SLabel>
+
+Application modules should usually get a named logger and emit stable messages plus safe contextual fields. Libraries should not call `basicConfig()` as a side effect because configuration belongs to the application boundary.
+
+```python
+# Works on Python 3.x
+import logging
+
+log = logging.getLogger(__name__)
+
+def charge(order_id, amount):
+    log.info("charging order", extra={"order_id": order_id, "amount": str(amount)})
+```
+
+Logger names form a hierarchy. `a.b.c` is a child of `a.b`, which is a child of `a`. That hierarchy is what lets a single configuration govern a whole subsystem.
+
+<SLabel>Mechanism and propagation</SLabel>
+
+A logging call first checks whether the logger is enabled for that level. If it is, a `LogRecord` is created, then passed through logger filtering, handler filtering, formatting, and emission. Unless propagation is disabled, the record walks up the logger hierarchy toward parent handlers.
+
+```python
+# Works on Python 3.x
+import logging
+
+logger = logging.getLogger("a.b")
+print(logger.propagate)
+print(logger.isEnabledFor(logging.INFO))
+```
+
+That `isEnabledFor` gate is why `%`-style argument logging matters. With:
+
+```python
+# Works on Python 3.x
+log.debug("loaded %s rows from %s", row_count, source)
+```
+
+the expensive final string formatting is deferred until the message is actually emitted. By contrast, an f-string is formatted before the logging call even if the level is disabled.
+
+<SLabel>Exceptions and record shape</SLabel>
+
+Use `logger.exception()` inside an exception handler to include traceback information. It is effectively `error(..., exc_info=True)`.
+
+```python
+# Works on Python 3.x
+try:
+    process_order(order)
+except PaymentError:
+    log.exception("payment processing failed", extra={"order_id": order.id})
+    raise
+```
+
+The `extra` mapping adds attributes to the `LogRecord`. That is powerful, but it also means names can collide with standard record attributes if you choose them carelessly.
+
+<SLabel>Version context</SLabel>
+
+`logging` is stable standard library across Python 3. Current project guidance targets Python 3.10-3.14. Python 3.9 and below are End-of-Life.
+
+The stdlib does not impose a structured logging schema. JSON output or downstream ingestion structure is typically handled by custom formatters or external log pipelines.
+
+<SLabel>Edge cases and gotchas</SLabel>
+
+Never log secrets, raw tokens, passwords, full request bodies, or unnecessary personal data. Logs are durable operational data, not a safe debugging scratchpad.
+
+```python
+# Works on Python 3.x
+safe = {
+    "order_id": order.id,
+    "customer_id": order.customer_id,
+}
+log.info("order accepted", extra=safe)
+```
+
+Logging can also fail operationally:
+
+- slow handlers can stall latency-sensitive paths
+- full disks can block file handlers
+- recursive logging from inside handlers can create feedback loops
+- noisy debug logs can dominate cost and signal quality
+
+<Callout type="warn">
+  Logs are production data. Treat them as retained, searchable, and potentially visible to more people and systems than the application itself.
+</Callout>
+
+<SLabel>Production usage</SLabel>
+
+Configure logging once at the application entry point. Use module loggers everywhere else. Use levels consistently:
+
+- `debug` for deep diagnostics
+- `info` for expected lifecycle events
+- `warning` for degraded but continuing behavior
+- `error` for failed operations
+- `critical` for process- or system-level failure
+
+```python
+# Works on Python 3.x
+import logging
+
+def configure_logging():
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s %(message)s",
+    )
+```
+
+Pair logging with explicit boundary parsing and type clarity so contextual fields are predictable and searchable. See <CardRef id="language-type-hints" />. For deterministic cleanup around handlers and files, use context managers and explicit teardown rather than garbage-collection timing; see <CardRef id="runtime-del-gc" />.
+
+<SLabel>Further depth</SLabel>
+
+- [logging module](https://docs.python.org/3/library/logging.html)
+- [Logging HOWTO](https://docs.python.org/3/howto/logging.html)
+- [Logging Cookbook](https://docs.python.org/3/howto/logging-cookbook.html)
+- [LogRecord attributes](https://docs.python.org/3/library/logging.html#logrecord-attributes)

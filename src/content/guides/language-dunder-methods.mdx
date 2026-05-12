@@ -1,0 +1,345 @@
+import { specialMethodLabData } from "@/data/simulations"
+
+Python documentation calls them **special method names**. The community nickname is **dunder methods**, short for **double underscore** methods, because names such as `__eq__`, `__iter__`, and `__repr__` begin and end with `__`.
+
+The important point is not the nickname. The important point is that these methods are how Python maps ordinary syntax and built-ins onto user-defined types.
+
+<SLabel>Core answer</SLabel>
+
+Special methods are the protocol layer behind Python syntax.
+
+- `a == b` can dispatch through `__eq__`
+- `len(x)` uses `__len__`
+- `for item in x` uses `__iter__`
+- `item in x` prefers `__contains__`
+- `repr(x)` uses `__repr__`
+- `with x:` uses `__enter__` and `__exit__`
+
+This is why custom classes can feel native in Python: the language does not need a separate syntax for "user-defined container" or "user-defined context manager." It asks whether the object implements the relevant protocol.
+
+One exception matters immediately: `is` is **not** a special-method dispatch point. Identity comparison is direct.
+
+```python
+# Works on Python 3.x
+class UserId:
+    def __init__(self, value):
+        self.value = value
+
+    def __eq__(self, other):
+        if not isinstance(other, UserId):
+            return NotImplemented
+        return self.value == other.value
+
+a = UserId(7)
+b = UserId(7)
+alias = a
+
+print(a == b)      # True -> __eq__
+print(a is b)      # False -> different objects
+print(a is alias)  # True -> same object
+```
+
+<SpecialMethodLab data={specialMethodLabData} />
+
+<SLabel>Why they exist</SLabel>
+
+Python's object model is protocol-driven. Instead of asking every object to inherit from a single rigid container or comparable base class, Python asks whether the object supports the operation at hand.
+
+That is why built-ins and syntax stay uniform:
+
+- if an object supports iteration, `for` can use it
+- if an object supports truth testing, `if obj:` can use it
+- if an object supports context management, `with obj:` can use it
+
+This is also why implementing a dunder method is not cosmetic. You are defining part of the public semantics of the type.
+
+<SLabel>Most used special methods</SLabel>
+
+The most important ones in ordinary production code are:
+
+<table>
+  <thead>
+    <tr>
+      <th>Category</th>
+      <th>Method names</th>
+      <th>Used by</th>
+      <th>Main concern</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Representation</td>
+      <td><code>__repr__</code></td>
+      <td><code>repr(obj)</code>, debugging, logs</td>
+      <td>Make object state inspectable</td>
+    </tr>
+    <tr>
+      <td>Equality / hashing</td>
+      <td><code>__eq__</code>, <code>__hash__</code></td>
+      <td><code>==</code>, dict keys, set elements</td>
+      <td>Keep equality and hash coherent</td>
+    </tr>
+    <tr>
+      <td>Truthiness / size</td>
+      <td><code>__bool__</code>, <code>__len__</code></td>
+      <td><code>if obj</code>, <code>bool(obj)</code>, <code>len(obj)</code></td>
+      <td>Keep emptiness and truth rules predictable</td>
+    </tr>
+    <tr>
+      <td>Iteration / membership</td>
+      <td><code>__iter__</code>, <code>__contains__</code></td>
+      <td><code>for</code>, <code>in</code></td>
+      <td>Expose efficient traversal and lookup semantics</td>
+    </tr>
+    <tr>
+      <td>Construction</td>
+      <td><code>__new__</code>, <code>__init__</code></td>
+      <td><code>Class(...)</code></td>
+      <td>Separate allocation from initialization when necessary</td>
+    </tr>
+    <tr>
+      <td>Context management</td>
+      <td><code>__enter__</code>, <code>__exit__</code></td>
+      <td><code>with</code></td>
+      <td>Make resource cleanup deterministic</td>
+    </tr>
+  </tbody>
+</table>
+
+If you implement only a few well, a custom type can already integrate naturally with the rest of Python.
+
+<SLabel>How dispatch actually works</SLabel>
+
+When Python sees syntax or a built-in that maps to a protocol, it performs a method lookup following the data model rules for that operation.
+
+For equality:
+
+- `a == b` is semantic comparison
+- Python may call `a.__eq__(b)`
+- if that returns `NotImplemented`, Python can try the reflected path on the other operand before deciding
+
+For identity:
+
+- `a is b` is direct identity comparison
+- there is no `__is__`
+- user code cannot overload identity
+
+That distinction is why the sentence "the `is` operator uses `__eq__`" is wrong. The correct statement is:
+
+- `==` may dispatch through `__eq__`
+- `is` never does
+
+```python
+# Works on Python 3.x
+class Token:
+    def __eq__(self, other):
+        print("__eq__ called")
+        return True
+
+x = Token()
+y = Token()
+
+print(x == y)  # calls __eq__
+print(x is y)  # direct identity check
+```
+
+For truth testing:
+
+- Python prefers `__bool__`
+- if `__bool__` is absent, Python can use `__len__`
+
+```python
+# Works on Python 3.x
+class Batch:
+    def __init__(self, rows):
+        self.rows = list(rows)
+
+    def __len__(self):
+        return len(self.rows)
+
+print(bool(Batch([])))
+print(bool(Batch([1, 2])))
+```
+
+For membership:
+
+- Python prefers `__contains__`
+- if absent, Python can fall back to iteration
+
+```python
+# Works on Python 3.x
+class RoleSet:
+    def __init__(self, roles):
+        self._roles = set(roles)
+
+    def __contains__(self, role):
+        return role in self._roles
+
+print("admin" in RoleSet({"admin", "billing"}))
+```
+
+For iteration:
+
+- `for` uses `iter(obj)`
+- that normally dispatches to `__iter__`
+
+```python
+# Works on Python 3.x
+class Countdown:
+    def __init__(self, start):
+        self.start = start
+
+    def __iter__(self):
+        current = self.start
+        while current > 0:
+            yield current
+            current -= 1
+
+print(list(Countdown(3)))
+```
+
+<SLabel>Equality, hashing, and container semantics</SLabel>
+
+`__eq__` and `__hash__` must be treated as one design surface.
+
+If two objects compare equal, their hashes must also be equal. That rule matters because dictionaries and sets use hash lookup first and equality second. If you break the relationship, keys and set membership become unreliable.
+
+```python
+# Works on Python 3.x
+class UserId:
+    def __init__(self, value):
+        self.value = value
+
+    def __eq__(self, other):
+        if not isinstance(other, UserId):
+            return NotImplemented
+        return self.value == other.value
+
+    def __hash__(self):
+        return hash(self.value)
+```
+
+This connects directly to the dict and set guides:
+
+- dict keys must be hashable
+- set elements must be hashable
+- mutation of equality-relevant fields after insertion is dangerous
+
+See <CardRef id="dict-hash-tables" /> and <CardRef id="sets-membership-views" />.
+
+Dataclasses are relevant here because they can generate `__eq__` and `__hash__` behavior for you. That is useful, but it is still your contract. See <CardRef id="classes-dataclass-fields" />.
+
+<SLabel>Representation and debugging</SLabel>
+
+`__repr__` is one of the highest-value special methods because it directly affects debugging, logs, and interactive inspection.
+
+Good `__repr__` practice:
+
+- make it unambiguous
+- include the fields that explain state
+- keep it developer-facing, not user-marketing-facing
+
+```python
+# Works on Python 3.x
+class Job:
+    def __init__(self, name, priority):
+        self.name = name
+        self.priority = priority
+
+    def __repr__(self):
+        return f"Job(name={self.name!r}, priority={self.priority!r})"
+
+print(repr(Job("backup", 3)))
+```
+
+If your type already maps cleanly onto dataclass-like field behavior, generated `__repr__` may be enough. If not, write the representation deliberately.
+
+<SLabel>Best practices for implementing dunder methods</SLabel>
+
+1. Implement only protocols the type can honor naturally.
+
+If the object is not meaningfully iterable, do not force `__iter__` into it just because the syntax looks elegant.
+
+2. Keep semantic contracts coherent.
+
+- `__eq__` and `__hash__` must agree
+- `__bool__` and `__len__` should not fight each other
+- `__contains__` should match what iteration conceptually exposes
+
+3. Return `NotImplemented` for unsupported binary operations.
+
+This is especially important in `__eq__` and other rich comparisons. It gives Python a chance to try the other operand's implementation instead of silently lying.
+
+4. Keep the fast-path methods cheap.
+
+Truthiness, `repr`, and membership are often used in debugging, logging, and control flow. If they are unexpectedly expensive, they become hidden costs.
+
+5. Do not overload semantics for surprise value.
+
+A class whose `__bool__` means "has passed validation in the last hour" or whose `__contains__` does a network lookup is a maintenance hazard.
+
+6. Prefer generated behavior when the type is plain data.
+
+If the class is mostly a record, `NamedTuple` or `@dataclass` may be better than writing repetitive dunders by hand. See <CardRef id="classes-data-builders" />.
+
+<SLabel>Version context</SLabel>
+
+Special methods are foundational Python behavior and stable across Python 3. Current project guidance targets Python 3.10-3.14. Python 3.9 and below are End-of-Life.
+
+Two version-sensitive notes around surrounding features:
+
+- structural pattern matching is Python 3.10+ and uses protocol-driven behavior in some places
+- dataclass options that affect generated special methods, such as `slots=True`, have their own version context
+
+The names and meanings of core dunder protocols such as `__eq__`, `__len__`, `__iter__`, and `__enter__` are stable Python behavior. Exact lookup internals and bytecode details are interpreter implementation concerns.
+
+<SLabel>Edge cases and gotchas</SLabel>
+
+Do not confuse the informal nickname with the API contract. The docs talk about **special method names**, and the meaning comes from the data model, not from the fact that the name has underscores.
+
+Do not implement `__hash__` on mutable equality-relevant state casually. If the object changes after becoming a dict key or set element, later lookups can behave incorrectly.
+
+Do not rely on `__repr__` for end-user formatting or machine-stable serialization.
+
+Do not use `is` where you mean value equality.
+
+```python
+# Works on Python 3.x
+name = "".join(["A", "n", "a"])
+target = "Ana"
+
+print(name == target)
+print(name is target)
+```
+
+<Callout type="warn">
+  The biggest special-method bug pattern is semantic inconsistency, not syntax. A type that technically implements <code>__eq__</code>, <code>__hash__</code>, or <code>__iter__</code> but violates caller expectations is worse than a type that simply omits the protocol.
+</Callout>
+
+<SLabel>Production usage</SLabel>
+
+Use special methods to make domain types integrate with Python where the mapping is honest:
+
+- `__repr__` for observability and debugging
+- `__eq__` / `__hash__` for value objects and stable keys
+- `__iter__` / `__contains__` for container-like abstractions
+- `__enter__` / `__exit__` for resource lifetimes
+
+Avoid hand-writing every possible protocol on every class. The point is not maximum cleverness. The point is to give the type the small set of native behaviors that make its contract clearer.
+
+For related content:
+
+- equality and identity: <CardRef id="language-identity-equality" />
+- hashing and key semantics: <CardRef id="dict-hash-tables" />
+- set element/hash rules: <CardRef id="sets-membership-views" />
+- generated `__eq__` / `__repr__` / `__hash__`: <CardRef id="classes-dataclass-fields" />
+- iterables and one-shot behavior: <CardRef id="memory-iterables" />
+
+<SLabel>Further depth</SLabel>
+
+- [Data model: special method names](https://docs.python.org/3/reference/datamodel.html#special-method-names)
+- [Data model: object.__hash__](https://docs.python.org/3/reference/datamodel.html#object.__hash__)
+- [Built-in functions: repr](https://docs.python.org/3/library/functions.html#repr)
+- [Built-in functions: len](https://docs.python.org/3/library/functions.html#len)
+- [Iterator types](https://docs.python.org/3/library/stdtypes.html#iterator-types)
+- [Context manager types](https://docs.python.org/3/reference/datamodel.html#context-managers)

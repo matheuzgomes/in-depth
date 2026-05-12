@@ -1,0 +1,129 @@
+The recurring dict pattern is: find the bucket for a key, create it if missing, then mutate that bucket. Python gives you `setdefault` and `defaultdict` for this, but they are not interchangeable and they are not free of traps.
+
+<SLabel>Core answer</SLabel>
+
+Use `dict.setdefault()` for a local one-off "get or create" update. Use `collections.defaultdict(factory)` when the whole mapping has one stable missing-key policy.
+
+```python
+# Works on Python 3.x
+index = {}
+pairs = [("python", 3), ("dict", 8), ("python", 14)]
+
+for word, location in pairs:
+    index.setdefault(word, []).append(location)
+
+print(index)
+```
+
+<SLabel>Mechanism and evaluation cost</SLabel>
+
+`setdefault(key, default)` does two things in one dict method call:
+
+- if the key exists, return the existing value
+- if the key is missing, insert `default` and return it
+
+The subtle part is that the `default` expression is still evaluated **before** the call, even if the key is already present.
+
+```python
+# Works on Python 3.x
+def make_default():
+    print("building default")
+    return []
+
+data = {"x": [1]}
+data.setdefault("x", make_default()).append(2)
+print(data)
+```
+
+That prints `building default` even though `"x"` already exists. This is the main reason `defaultdict` is often better for repeated grouping: the factory is only called when a missing key is actually accessed.
+
+```python
+# Works on Python 3.x
+from collections import defaultdict
+
+index = defaultdict(list)
+for word, location in pairs:
+    index[word].append(location)
+
+print(dict(index))
+```
+
+<SLabel>Why the naive pattern costs more</SLabel>
+
+This common spelling spreads one idea across multiple dict operations:
+
+```python
+# Works on Python 3.x
+index = {}
+
+for word, location in pairs:
+    if word not in index:
+        index[word] = []
+    index[word].append(location)
+```
+
+It is sometimes the right choice, especially when missing-key creation needs logging, validation, or a more complex branch. But when the real operation is simply "bucket, then mutate," `setdefault` or `defaultdict` states that intent more directly.
+
+The older `get`-then-store pattern is especially noisy because it tends to perform separate logical read and write steps:
+
+```python
+# Works on Python 3.x
+occurrences = index.get(word, [])
+occurrences.append(location)
+index[word] = occurrences
+```
+
+<SLabel>Version context</SLabel>
+
+`dict.setdefault` and `collections.defaultdict` are stable Python 3 APIs. Current project guidance targets Python 3.10-3.14. Python 3.9 and below are End-of-Life.
+
+Dict insertion order is guaranteed in Python 3.7+, so grouped output retains first-seen key order in supported versions.
+
+<SLabel>Edge cases and gotchas</SLabel>
+
+Do not reuse one mutable object as the default across unrelated keys unless shared state is the goal.
+
+```python
+# Works on Python 3.x
+shared = []
+data = {}
+
+data.setdefault("a", shared).append(1)
+data.setdefault("b", shared).append(2)
+print(data)
+```
+
+Both keys now reference the same list object.
+
+`defaultdict` has its own semantic cost: reading a missing key mutates the mapping by creating the default. That is excellent for accumulation, but it can be surprising at boundaries where "read" should not have write effects.
+
+<Callout type="warn">
+  If missing-key creation is expensive or has side effects, avoid computed defaults inside <code>setdefault</code>. Use an explicit branch or a lazy factory via <code>defaultdict</code>.
+</Callout>
+
+<SLabel>Production usage</SLabel>
+
+Use:
+
+- `setdefault` for small local transforms and parsers
+- `defaultdict` for accumulators, grouped indexes, and "dict of lists/sets/counters" workloads
+- explicit `if key not in mapping` when missing-key creation has extra business logic
+
+```python
+# Works on Python 3.x
+from collections import defaultdict
+
+def build_index(rows):
+    index = defaultdict(list)
+    for word, location in rows:
+        index[word].append(location)
+    return dict(index)
+```
+
+That `dict(index)` conversion is useful at API boundaries because callers then receive an ordinary mapping with no implicit missing-key mutation policy.
+
+<SLabel>Further depth</SLabel>
+
+- [dict.setdefault](https://docs.python.org/3/library/stdtypes.html#dict.setdefault)
+- [collections.defaultdict](https://docs.python.org/3/library/collections.html#collections.defaultdict)
+- [Mapping types - dict](https://docs.python.org/3/library/stdtypes.html#mapping-types-dict)

@@ -1,0 +1,17 @@
+Async servers spend most of their life waiting: waiting for connections, waiting for readable sockets, waiting for output buffers to drain, and then cleaning up deterministically.
+
+```python
+# Works on Python 3.7+
+async def handle(reader, writer):
+    line = await reader.readline()
+    writer.write(line.upper())
+    await writer.drain()
+    writer.close()
+    await writer.wait_closed()
+```
+
+<Callout type="info">
+  Fluent Python uses both a higher-level web-service example and a raw asyncio TCP server. The Python-level lesson is the same: await network readiness instead of blocking the loop.
+</Callout>
+
+<GuideLink id="async-servers-services" />

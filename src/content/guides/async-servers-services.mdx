@@ -1,0 +1,130 @@
+import { asyncServersTimelineData } from "@/data/simulations"
+
+This guide covers the server-side chapter-21 subjects: writing asyncio servers, understanding the lifecycle of a TCP handler, and relating those mechanics to higher-level async web-service frameworks.
+
+<SLabel>Core answer</SLabel>
+
+An async server is fundamentally an event loop that:
+
+- accepts connections
+- starts handler coroutines
+- awaits readable / writable network readiness
+- returns control quickly so other clients can progress
+
+The value is not just "many clients at once." The value is "many clients without one blocked client freezing the whole process."
+
+```python
+# Works on Python 3.7+
+async def handle(reader, writer):
+    line = await reader.readline()
+    writer.write(line.upper())
+    await writer.drain()
+    writer.close()
+    await writer.wait_closed()
+```
+
+<AsyncTimelineLab data={asyncServersTimelineData} />
+
+<SLabel>Asyncio server mechanics</SLabel>
+
+The core asyncio server pattern is:
+
+- listen for a connection
+- hand the connection to a coroutine
+- let that coroutine await network events rather than blocking synchronously
+
+```python
+# Works on Python 3.7+
+import asyncio
+
+async def handle(reader, writer):
+    data = await reader.readline()
+    writer.write(data.upper())
+    await writer.drain()
+    writer.close()
+    await writer.wait_closed()
+
+async def main():
+    server = await asyncio.start_server(handle, "127.0.0.1", 8888)
+    async with server:
+        await server.serve_forever()
+```
+
+The real design win is that `reader.readline()` and `writer.drain()` are suspension points, so one slow client does not force every other client to wait behind a blocking socket call.
+
+<SLabel>FastAPI and higher-level services</SLabel>
+
+Fluent Python uses both a higher-level web-service example and a raw TCP server to show that the same async principles recur at different abstraction levels.
+
+This project stays standard-library-first, so the guide focuses on Python and event-loop mechanics rather than framework-specific APIs. The durable lesson is:
+
+- a framework may own routing, serialization, and dependency injection
+- but the coroutine scheduling, blocking hazards, and cancellation boundaries still follow Python's async model underneath
+
+That is the part you should transfer across frameworks.
+
+<SLabel>Handler lifecycle and flow control</SLabel>
+
+Two awaits in server code deserve special attention:
+
+- `await reader.readline()`
+- `await writer.drain()`
+
+The first awaits input readiness.
+The second awaits output-buffer backpressure relief.
+
+That second point is easy to miss. `writer.write(...)` usually stages bytes into a buffer. `drain()` is the point where your coroutine admits: "I may need to wait before assuming the transport can absorb more."
+
+This is a network-level form of backpressure, related to the semaphore-style concurrency backpressure in <CardRef id="async-context-backpressure" />.
+
+<SLabel>Version context</SLabel>
+
+Current project guidance targets Python 3.10-3.14. Python 3.9 and below are End-of-Life.
+
+Important version-sensitive note:
+
+- `asyncio.start_server` and stream-based server patterns are established asyncio APIs
+
+The chapter's framework example is useful conceptual material, but this guide keeps code examples within the Python standard-library and official-doc surface.
+
+<SLabel>Edge cases and gotchas</SLabel>
+
+Server coroutines can still freeze the process if they do blocking work on the event-loop thread:
+
+- synchronous file reads
+- CPU-heavy parsing
+- compression
+- legacy clients with blocking APIs
+
+If a handler does that work inline, it stops being a good async citizen no matter how elegant the outer `async def` looks.
+
+Connection cleanup is also not optional. A handler must close writers deliberately and await close completion when the API requires it.
+
+<Callout type="warn">
+  Async server code is mostly about waiting correctly and cleaning up correctly. The most common failures are not syntax errors but stalled loops, leaked connections, and missing flow-control boundaries.
+</Callout>
+
+<SLabel>Production usage</SLabel>
+
+Use stream-style asyncio servers when:
+
+- you need direct control over a TCP protocol
+- you want to understand the raw event-loop lifecycle
+- you are building or debugging infrastructure close to the transport
+
+Use higher-level async frameworks when the problem is HTTP application structure rather than socket-level protocol work, but carry over the same rules:
+
+- blocking code still blocks
+- cancellation still matters
+- output buffering still matters
+- cleanup still matters
+
+For operational request fan-out, timeouts, and structured failure boundaries, keep using <CardRef id="asyncio-task-groups" /> as the production companion.
+
+<SLabel>Further depth</SLabel>
+
+- [asyncio streams](https://docs.python.org/3/library/asyncio-stream.html)
+- [asyncio start_server](https://docs.python.org/3/library/asyncio-stream.html#asyncio.start_server)
+- [asyncio](https://docs.python.org/3/library/asyncio.html)
+- [Language reference: async with statement](https://docs.python.org/3/reference/compound_stmts.html#the-async-with-statement)
+- [Fluent Python, 2nd Edition, Chapter 21](https://www.oreilly.com/library/view/fluent-python-2nd/9781492056348/ch21.html)

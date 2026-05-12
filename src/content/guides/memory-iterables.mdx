@@ -1,0 +1,145 @@
+import { loopTraversalSimulation } from "@/data/simulations"
+
+An iterable is anything Python can call `iter()` on. The production question is not just "can I loop over it?" but "does it materialize all values, can it be replayed, and what state stays alive while iteration is in progress?"
+
+<SLabel>Core answer</SLabel>
+
+Use a concrete sequence when you need repeated passes, random access, slicing, or a stable snapshot. Use an iterator or generator when one-pass streaming is enough and memory pressure matters.
+
+```python
+# Works on Python 3.x
+def read_lines(path):
+    with open(path, encoding="utf-8") as fp:
+        for line in fp:
+            yield line.rstrip("\n")
+```
+
+Generators produce values lazily. That lowers peak memory usage because the whole result does not exist at once.
+
+```python
+# Works on Python 3.x
+numbers = (int(part) for part in "1,2,3".split(","))
+
+print(list(numbers))
+print(list(numbers))  # already exhausted
+```
+
+<SLabel>Mechanism and internals</SLabel>
+
+The iterator protocol is two operations:
+
+- `iter(obj)` asks for an iterator
+- `next(it)` asks for the next value until `StopIteration`
+
+A `for` loop is syntax around those calls.
+
+```python
+# Works on Python 3.x
+values = iter([10, 20])
+print(next(values))
+print(next(values))
+```
+
+<LoopSimulation data={loopTraversalSimulation} />
+
+Generator functions are more than "functions that yield." On CPython they keep a suspended execution frame alive between iterations: local variables, the current instruction position, and references to still-live objects remain attached to the generator object until it finishes or is discarded.
+
+That is why generators are memory-efficient for result size, but not free: each live generator still retains its frame state and anything reachable from it.
+
+```python
+# Works on Python 3.x
+def chunks(lines):
+    buffer = []
+    for line in lines:
+        buffer.append(line)
+        if len(buffer) == 3:
+            yield tuple(buffer)
+            buffer.clear()
+```
+
+In that example, `buffer` remains alive inside the suspended generator between `yield` points.
+
+<SLabel>Container, flat, and streaming models</SLabel>
+
+There are three materially different storage models:
+
+- container sequences such as `list` and `tuple`: store references to Python objects
+- flat sequences such as `bytes`, `bytearray`, and `array.array`: store values compactly
+- streaming iterables such as generators: store control state, not the whole output
+
+```python
+# Works on Python 3.x
+from array import array
+
+row = ["Ana", 42, {"active": True}]
+temperatures = array("h", [21, 22, 20, 19])
+
+print(row)
+print(temperatures)
+```
+
+If you turn a stream into `list(stream)`, you trade the streaming model for full materialization immediately.
+
+<SLabel>Version context</SLabel>
+
+The iterator protocol and generator semantics are stable Python 3 behavior. Modern type hints often use `collections.abc.Iterable`, `Iterator`, and `Sequence`. Current project guidance targets Python 3.10-3.14. Python 3.9 and below are End-of-Life.
+
+<SLabel>Edge cases and gotchas</SLabel>
+
+Do not call `len()` or slice an arbitrary iterable unless the API promises a sized sequence. Many iterables cannot answer length without consuming themselves, and many iterators cannot be restarted.
+
+```python
+# Works on Python 3.x
+def first_match(rows, predicate):
+    for row in rows:
+        if predicate(row):
+            return row
+    return None
+```
+
+`itertools.tee()` looks like cloning an iterator, but it does so by caching produced values. If one branch lags far behind the other, memory usage can grow toward full materialization.
+
+`list()` snapshots are useful at API boundaries, but they can silently exhaust a generator and allocate unbounded memory if the source is large or infinite.
+
+<Callout type="warn">
+  Be explicit about consumption semantics. If a function consumes an iterator, document that fact. Hidden one-shot behavior is a production bug factory.
+</Callout>
+
+<SLabel>Production usage</SLabel>
+
+Use these annotation rules:
+
+- accept `Iterable[T]` when you only need to loop once
+- accept `Sequence[T]` when you need indexing, length, or repeated passes
+- return an iterator when laziness is part of the contract
+- return a concrete container when callers need replayability and ownership
+
+```python
+# Works on Python 3.9+
+from collections.abc import Iterable
+
+def non_empty(lines: Iterable[str]):
+    for line in lines:
+        stripped = line.strip()
+        if stripped:
+            yield stripped
+```
+
+Materialize deliberately:
+
+```python
+# Works on Python 3.x
+def normalized_snapshot(lines):
+    return [line.strip() for line in lines if line.strip()]
+```
+
+That version is heavier in memory but easier to reuse and debug because the caller owns a stable list.
+
+For compact storage choices, see <CardRef id="memory-list-alternatives" />. For slice-producing sequences, see <CardRef id="sequences-slicing" />.
+
+<SLabel>Further depth</SLabel>
+
+- [Iterator types](https://docs.python.org/3/library/stdtypes.html#iterator-types)
+- [Yield expressions](https://docs.python.org/3/reference/expressions.html#yield-expressions)
+- [collections.abc](https://docs.python.org/3/library/collections.abc.html)
+- [itertools.tee](https://docs.python.org/3/library/itertools.html#itertools.tee)

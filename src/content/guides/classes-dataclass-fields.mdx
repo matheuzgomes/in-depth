@@ -1,0 +1,169 @@
+`@dataclass` is a code generator driven by annotations and field declarations. The important technical questions are not "does it make classes shorter?" but "which methods does it synthesize, what storage model does it imply, and what invariants does it leave entirely to me?"
+
+<SLabel>Core answer</SLabel>
+
+Use `field()` when a plain default is not enough: mutable defaults, hidden constructor fields, metadata, comparison control, or factories.
+
+```python
+# Works on Python 3.7+
+from dataclasses import dataclass, field
+
+@dataclass
+class Batch:
+    rows: list[str] = field(default_factory=list)
+```
+
+`default_factory` runs at instance creation time, which is why it solves the shared-mutable-default problem instead of reproducing it.
+
+<SLabel>Mechanism and generated methods</SLabel>
+
+Dataclasses inspect class annotations and synthesize methods such as:
+
+- `__init__`
+- `__repr__`
+- `__eq__`
+- optionally ordering methods
+- optionally hash behavior depending on `eq`, `frozen`, and `unsafe_hash`
+
+```python
+# Works on Python 3.7+
+from dataclasses import dataclass
+
+@dataclass(frozen=True, order=True)
+class Version:
+    major: int
+    minor: int
+    patch: int = 0
+
+print(Version(3, 14) > Version(3, 10))
+```
+
+Ordering follows field order, not domain meaning. If field order does not encode business ordering, `order=True` can generate deceptively wrong semantics.
+
+`frozen=True` prevents ordinary attribute assignment through the generated API, but it is not deep immutability and it is not a security boundary.
+
+<SLabel>Storage model and slots</SLabel>
+
+Without `slots=True`, a normal dataclass instance usually has an instance `__dict__`. With `slots=True`, the instance stores attributes in slot descriptors and does not expose a `__dict__` unless you add one deliberately.
+
+Measured locally on CPython 3.12.3, 64-bit Linux for a simple two-field dataclass:
+
+- plain dataclass instance: `48` bytes plus about `280` bytes for `__dict__`
+- slotted dataclass instance: `48` bytes and no instance `__dict__`
+
+```python
+# Requires Python 3.10+
+# Example byte counts below were measured on CPython 3.12.3, 64-bit Linux.
+import sys
+from dataclasses import dataclass
+
+@dataclass
+class B:
+    x: int
+    y: int
+
+@dataclass(slots=True)
+class A:
+    x: int
+    y: int
+
+print(hasattr(B(1, 2), "__dict__"))
+print(hasattr(A(1, 2), "__dict__"))
+print(sys.getsizeof(B(1, 2)))
+print(sys.getsizeof(B(1, 2).__dict__))
+print(sys.getsizeof(A(1, 2)))
+```
+
+This is a CPython memory-layout concern, not a language guarantee, but it is one of the main reasons `slots=True` matters for large object populations.
+
+<SLabel>Version context</SLabel>
+
+Dataclasses were added in Python 3.7 [PEP 557]. `slots=True` was added in Python 3.10. `weakref_slot=True` was added in Python 3.11. Current project guidance targets Python 3.10-3.14. Python 3.9 and below are End-of-Life.
+
+```python
+# Requires Python 3.10+
+from dataclasses import dataclass
+
+@dataclass(slots=True)
+class Point:
+    x: int
+    y: int
+```
+
+Dataclasses also generate `__match_args__` by default, which makes them participate naturally in structural pattern matching.
+
+```python
+# Requires Python 3.10+
+from dataclasses import dataclass
+
+@dataclass
+class Point:
+    x: int
+    y: int
+
+print(Point.__match_args__)
+```
+
+<SLabel>Field categories</SLabel>
+
+`ClassVar` marks class attributes that are not dataclass instance fields. `InitVar` creates an initialization-only parameter that is passed to `__post_init__` but not stored as a field.
+
+```python
+# Works on Python 3.7+
+from dataclasses import InitVar, dataclass, field
+from typing import ClassVar
+
+@dataclass
+class User:
+    table: ClassVar[str] = "users"
+    name: str
+    raw_email: InitVar[str]
+    email: str = field(init=False)
+
+    def __post_init__(self, raw_email):
+        self.email = raw_email.strip().casefold()
+```
+
+Those distinctions matter because dataclasses are driven by field classification, not just by visible attributes in the class body.
+
+<SLabel>Edge cases and gotchas</SLabel>
+
+Hash behavior is where many production bugs start. Mutable dataclasses should usually not be hashable. `unsafe_hash=True` exists, but the name is honest: it is only safe when the fields involved in hashing are effectively immutable.
+
+<Callout type="warn">
+  Do not use <code>unsafe_hash=True</code> as a convenience toggle. If hashed instances can mutate, dict and set behavior can become incorrect after insertion.
+</Callout>
+
+Field ordering still follows Python's rule that non-default parameters must come before defaulted ones. `field(default_factory=...)` counts as a defaulted field for that purpose.
+
+<SLabel>Production usage</SLabel>
+
+Use:
+
+- `__post_init__` for validation and normalization
+- `frozen=True` for value objects
+- `slots=True` for many small instances after measuring
+- `field(init=False)` for derived stored fields
+
+```python
+# Works on Python 3.7+
+from dataclasses import dataclass
+
+@dataclass(frozen=True)
+class Port:
+    value: int
+
+    def __post_init__(self):
+        if not 0 < self.value < 65536:
+            raise ValueError("port out of range")
+```
+
+Field annotations connect directly to <CardRef id="language-type-hints" />, but runtime validation remains your responsibility.
+
+<SLabel>Further depth</SLabel>
+
+- [dataclasses module](https://docs.python.org/3/library/dataclasses.html)
+- [dataclasses.field](https://docs.python.org/3/library/dataclasses.html#dataclasses.field)
+- [typing.ClassVar](https://docs.python.org/3/library/typing.html#typing.ClassVar)
+- [PEP 557: Data Classes](https://peps.python.org/pep-0557/)
+- [sys.getsizeof](https://docs.python.org/3/library/sys.html#sys.getsizeof)

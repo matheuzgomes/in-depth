@@ -1,0 +1,17 @@
+Python bytecode is the instruction stream CPython executes after compiling your source. It is one of the best ways to explain **why** two equivalent-looking snippets can have different interpreter overhead.
+
+```python
+# Works on Python 3.x
+import dis
+
+def total(xs):
+    return [x * 2 for x in xs]
+
+dis.dis(total)
+```
+
+<Callout type="info">
+  Bytecode is a diagnostic layer, not a machine-code contract. Use it to understand execution shape, name lookups, call boundaries, and dedicated opcodes such as <code>LIST_APPEND</code>, then confirm performance with measurement.
+</Callout>
+
+<GuideLink id="language-bytecode-dis" />

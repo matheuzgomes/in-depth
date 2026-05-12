@@ -1,0 +1,207 @@
+import { asyncLimitsTimelineData } from "@/data/simulations"
+
+This guide covers the chapter-21 boundary layer: what async can and cannot do, why CPU-bound work still starves the event loop, and how to type async protocols without collapsing everything into unhelpful `Any`.
+
+<SLabel>Core answer</SLabel>
+
+Async Python is a concurrency model for **waiting workloads**.
+
+- it helps when work spends time waiting for sockets, timers, subprocesses, or other external readiness
+- it does not make CPU-bound Python bytecode run in parallel inside one event-loop thread
+- it needs accurate protocol types if you want APIs to stay clear under maintenance
+
+```python
+# Works on Python 3.10+
+from collections.abc import AsyncIterator
+import asyncio
+
+async def ticker() -> AsyncIterator[int]:
+    for value in (1, 2, 3):
+        await asyncio.sleep(0.1)
+        yield value
+```
+
+<AsyncTimelineLab data={asyncLimitsTimelineData} />
+
+<SLabel>Where async helps and where it stops</SLabel>
+
+Async code is valuable when each unit of work naturally alternates between:
+
+- brief CPU work
+- an `await` on external readiness
+
+That gives the event loop scheduling opportunities between tasks. If those await points are frequent and honest, one thread can keep many I/O-bound operations in flight.
+
+If a coroutine does long CPU work without awaiting, that advantage disappears.
+
+```python
+# Works on Python 3.7+
+async def cpu_heavy():
+    total = 0
+    for i in range(50_000_000):
+        total += i
+    return total
+```
+
+This function is legal async code, but operationally it is a bad citizen. Once it starts running, the loop cannot preempt it at Python level. Other tasks wait until the function either returns or reaches an `await`, and here it never does.
+
+That is the important engineering boundary:
+
+- async improves overlap for waiting workloads
+- it does not replace process-based CPU parallelism
+- it does not compensate for a blocking library hidden behind async syntax
+
+<SLabel>Mechanism: why the loop stalls</SLabel>
+
+The event loop is cooperative. It resumes a task, the task runs Python bytecode, and the loop gets control back only when the task:
+
+- awaits another awaitable
+- returns
+- raises
+
+There is no general "timeslice the coroutine after N Python instructions" contract at the language level. That is why event-loop starvation is easy to create with:
+
+- CPU-heavy loops
+- synchronous compression or parsing
+- blocking file or network APIs
+- accidental `time.sleep(...)` inside `async def`
+
+```python
+# Works on Python 3.x
+import asyncio
+import time
+
+async def frozen():
+    time.sleep(0.5)
+    return "done"
+```
+
+The presence of `async def` does not make `time.sleep` cooperative. The coroutine simply blocks the event-loop thread.
+
+See <CardRef id="async-foundations-awaitables" /> for the base scheduling model and <CardRef id="async-context-backpressure" /> for practical offloading boundaries such as `asyncio.to_thread`.
+
+<SLabel>Typing async protocols precisely</SLabel>
+
+The async side of the type system is about protocol clarity, not decoration.
+
+The main interfaces are:
+
+- `Awaitable[T]`: something you can `await` to get `T`
+- `Coroutine[Any, Any, T]`: a coroutine object whose final result is `T`
+- `AsyncIterable[T]`: something usable in `async for`
+- `AsyncIterator[T]`: an async iterable that also provides the next-item protocol
+- `AsyncGenerator[T, SendT]`: an async generator function result
+
+For modern Python, prefer the abstract protocol type that matches the boundary you are exposing.
+
+```python
+# Works on Python 3.10+
+from collections.abc import AsyncIterable
+
+async def consume_ids(source: AsyncIterable[int]) -> list[int]:
+    return [value async for value in source]
+```
+
+This signature is stronger than `source: object` and more reusable than forcing callers to hand you one concrete async generator implementation.
+
+When the function specifically manufactures and returns a native coroutine object, the most useful public annotation is usually still the final awaited result type on the function itself:
+
+```python
+# Works on Python 3.10+
+import asyncio
+
+async def fetch_total() -> int:
+    await asyncio.sleep(0.1)
+    return 3
+```
+
+Callers see `async def ... -> int` because the annotation describes the value produced when awaited. If you are typing a variable that stores the created coroutine object, that is when `Coroutine[..., T]` or `Awaitable[T]` becomes useful.
+
+```python
+# Works on Python 3.10+
+from collections.abc import Awaitable
+
+async def fetch_total() -> int:
+    return 3
+
+pending: Awaitable[int] = fetch_total()
+```
+
+This connects directly to <CardRef id="language-type-hints" />: accept the most general correct input protocol, and return the type your caller actually needs.
+
+<SLabel>What not to promise in async APIs</SLabel>
+
+Do not promise more than the runtime model actually provides.
+
+Bad assumptions include:
+
+- "async means parallel"
+- "async means non-blocking by default"
+- "an async iterator is automatically buffered"
+- "a typed awaitable is safe to forget about"
+
+Typed async APIs still need lifecycle discipline:
+
+- awaited completion
+- timeout policy
+- cancellation policy
+- ownership of spawned tasks
+
+That is why structured concurrency is separate from basic async syntax. For failure boundaries and task ownership, use <CardRef id="asyncio-task-groups" />.
+
+<SLabel>Version context</SLabel>
+
+Current project guidance targets Python 3.10-3.14. Python 3.9 and below are End-of-Life.
+
+Relevant version markers:
+
+- native coroutines and `await`: Python 3.5+ [PEP 492]
+- async generators: Python 3.6+ [PEP 525]
+- async comprehensions: Python 3.6+ [PEP 530]
+- `collections.abc` generic aliases such as `AsyncIterator[int]`: standard modern spelling in current supported Python
+
+For this repo's supported range, these async protocol types are stable baseline tools. Older `typing`-module spellings remain historically relevant, but they are not the best default for new code unless compatibility constraints force them.
+
+<SLabel>Edge cases and gotchas</SLabel>
+
+`sys.getswitchinterval()` and the thread scheduler do not solve coroutine starvation inside one event loop. Thread scheduling is a different mechanism from async task cooperation.
+
+Annotating everything as `Coroutine[Any, Any, Any]` leaks implementation detail and makes public APIs harder to use. Most callers care that they can await a result, iterate an async stream, or pass an async source into your function.
+
+Async generators are not general-purpose containers. They are one-pass streams with awaited production boundaries.
+
+<Callout type="warn">
+  If the workload is CPU-bound, your first async design question should be whether the work belongs in another process, native extension, or service boundary. Pretending the event loop will absorb it is operationally dishonest.
+</Callout>
+
+<SLabel>Production usage</SLabel>
+
+Use async when:
+
+- throughput depends on overlapping waits
+- you need many concurrent sockets or timers
+- the system is mostly I/O-bound and cancellation-aware
+
+Do not use async as a reflex when:
+
+- the hot path is CPU-heavy Python code
+- the dependency stack is fundamentally blocking
+- the team cannot maintain task ownership and timeout discipline
+
+Type async APIs with protocol intent:
+
+- `Awaitable[T]` when the boundary is "I can await this"
+- `AsyncIterable[T]` when the boundary is "I can consume this stream"
+- `AsyncIterator[T]` when the consumer pulls values step by step
+- concrete return annotations on `async def` for the final awaited result
+
+<SLabel>Further depth</SLabel>
+
+- [asyncio](https://docs.python.org/3/library/asyncio.html)
+- [Coroutines and Tasks](https://docs.python.org/3/library/asyncio-task.html)
+- [collections.abc — AsyncIterable, AsyncIterator, Awaitable, Coroutine](https://docs.python.org/3/library/collections.abc.html)
+- [typing — annotating generators and coroutines](https://docs.python.org/3/library/typing.html)
+- [PEP 492: Coroutines with async and await syntax](https://peps.python.org/pep-0492/)
+- [PEP 525: Asynchronous Generators](https://peps.python.org/pep-0525/)
+- [PEP 530: Asynchronous Comprehensions](https://peps.python.org/pep-0530/)
+- [Fluent Python, 2nd Edition, Chapter 21](https://www.oreilly.com/library/view/fluent-python-2nd/9781492056348/ch21.html)

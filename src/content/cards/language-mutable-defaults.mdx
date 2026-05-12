@@ -1,0 +1,17 @@
+Default arguments are created once when the function is defined. If the default is mutable, every call shares it.
+
+```python
+# Works on Python 3.x
+def add_user(name, users=[]):  # shared list
+    users.append(name)
+    return users
+
+add_user("Ana")
+print(add_user("Bo"))  # ['Ana', 'Bo']
+```
+
+<Callout type="warn">
+  Use <code>None</code> or a private sentinel, then allocate inside the function.
+</Callout>
+
+<GuideLink id="language-mutable-defaults" />

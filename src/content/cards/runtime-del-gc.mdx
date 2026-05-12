@@ -1,0 +1,16 @@
+`del` removes a reference, not the object itself. An object is reclaimed only when no live references can reach it.
+
+```python
+# Works on Python 3.x
+data = [1, 2, 3]
+alias = data
+del data
+
+print(alias)  # still [1, 2, 3]
+```
+
+<Callout type="warn">
+  Do not rely on <code>__del__</code> for files, sockets, or locks. Use <code>with</code> so cleanup is explicit.
+</Callout>
+
+<GuideLink id="runtime-del-gc" />

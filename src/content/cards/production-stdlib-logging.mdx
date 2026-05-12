@@ -1,0 +1,17 @@
+The stdlib `logging` module is production-capable when you use hierarchy, levels, handlers, and structured context deliberately.
+
+```python
+# Works on Python 3.x
+import logging
+
+logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s %(message)s")
+log = logging.getLogger("orders.payment")
+order_id = "ORD-42"
+log.info("payment accepted", extra={"order_id": order_id})
+```
+
+<Callout type="warn">
+  Never log secrets or raw request bodies. Pair logging with <CardRef id="language-type-hints" /> and boundary validation.
+</Callout>
+
+<GuideLink id="production-stdlib-logging" />

@@ -1,0 +1,26 @@
+If the question is “which container should I pick?”, start by separating four jobs: mutable ordered work (`list`), fixed ordered record (`tuple`), repeated membership/uniqueness (`set`), and dense homogeneous numbers (`array.array`).
+
+```python
+# Works on Python 3.x
+from array import array
+
+ordered = [10, 20, 30]
+record = (10, 20, 30)
+unique = {10, 20, 30}
+packed = array("I", [10, 20, 30])
+
+print(type(ordered), type(record), type(unique), type(packed))
+```
+
+<VerdictGrid items={[
+  { name: "list", value: "mutable order", sub: "general-purpose default", good: true },
+  { name: "tuple", value: "fixed shape", sub: "lean immutable record", good: true },
+  { name: "set", value: "fast membership", sub: "uniqueness + algebra", good: true },
+  { name: "array.array", value: "packed values", sub: "dense homogeneous numbers", good: true }
+]} />
+
+<Callout type="warn">
+  Do not compare only syntax. <code>set</code> is a hash table, <code>list</code> and <code>tuple</code> are object-reference sequences, and <code>array.array</code> is packed C storage. Their memory and performance costs come from different representations.
+</Callout>
+
+<GuideLink id="memory-container-comparison" />

@@ -1,0 +1,20 @@
+Dictionaries are fast because keys map through a hash table. The cost is memory overhead and a hard requirement: keys must be hashable.
+
+```python
+# Works on Python 3.x
+cache = {}
+cache[("user", 42)] = "active"  # tuple of hashable values
+
+try:
+    cache[["user", 42]] = "active"
+except TypeError as exc:
+    print(exc)
+```
+
+<VerdictGrid items={[
+  { name: "key lookup", value: "O(1)", sub: "average case", good: true },
+  { name: "list search", value: "O(n)", sub: "scan every candidate", good: false },
+  { name: "dict memory", value: "higher", sub: "keeps sparse table room", good: false }
+]} />
+
+<GuideLink id="dict-hash-tables" />

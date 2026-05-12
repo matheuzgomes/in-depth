@@ -1,0 +1,17 @@
+Real async production work is not just `await`. You also need backpressure and offloading patterns such as semaphores, `as_completed`, and thread delegation for blocking boundaries.
+
+```python
+# Works on Python 3.7+
+import asyncio
+
+async def fetch_one(name, sem):
+    async with sem:
+        await asyncio.sleep(0.1)
+        return name
+```
+
+<Callout type="warn">
+  Async code without concurrency limits is a reliability bug, not a sophistication badge. Bound fan-out explicitly.
+</Callout>
+
+<GuideLink id="async-context-backpressure" />

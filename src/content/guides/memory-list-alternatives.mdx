@@ -1,0 +1,149 @@
+`list` is the default Python sequence because it is flexible, indexed, and easy to mutate. It is not the right data structure when the real workload is numeric storage, queue operations at the left edge, or zero-copy binary slicing.
+
+<SLabel>Core answer</SLabel>
+
+Choose the container by representation and mutation pattern:
+
+- `list`: heterogeneous Python objects, random access, right-end append
+- `array.array`: homogeneous C values packed contiguously
+- `collections.deque`: fast append/pop at both ends
+- `memoryview`: zero-copy window over binary buffers
+
+```python
+# Works on Python 3.x
+from collections import deque
+
+events = deque(maxlen=3)
+for event in ["a", "b", "c", "d"]:
+    events.append(event)
+
+print(list(events))   # ['b', 'c', 'd']
+```
+
+<SLabel>Mechanism and memory layout</SLabel>
+
+A `list` stores references to Python objects. For numeric data, that means one pointer per element plus one full Python number object per element. An `array.array("d")` stores raw C `double` values directly, with no separate Python `float` object per element. On mainstream 64-bit CPython builds that is typically 8 bytes per element, but the exact width comes from the platform C type.
+
+Measured locally on CPython 3.12.3, 64-bit Linux:
+
+- `sys.getsizeof([1.0] * 1000)` -> `8056` bytes for the list container only
+- `sys.getsizeof((1.0,) * 1000)` -> `8040` bytes for the tuple container only
+- `sys.getsizeof(array("d", [1.0] * 1000))` -> `8080` bytes total for the packed doubles
+
+Those list and tuple measurements do **not** include the `1000` separate `float` objects. The array measurement does include the raw numeric payload. That is why the real memory gap becomes dramatic for numeric workloads.
+
+```python
+# Works on Python 3.x
+# Example byte counts below were measured on CPython 3.12.3, 64-bit Linux.
+import sys
+from array import array
+
+n = 10
+list_total = sys.getsizeof([1.0] * n) + n * sys.getsizeof(1.0)
+tuple_total = sys.getsizeof((1.0,) * n) + n * sys.getsizeof(1.0)
+array_total = sys.getsizeof(array("d", [1.0] * n))
+
+print(list_total)   # 376
+print(tuple_total)  # 360
+print(array_total)  # 160
+```
+
+This is the same container-vs-flat distinction discussed in <CardRef id="memory-tuples-lists" />: lists and tuples are object containers, arrays are packed value storage.
+
+<SLabel>Deque vs list</SLabel>
+
+`list.append()` and `list.pop()` at the right edge are excellent. `list.pop(0)` and `list.insert(0, value)` are not: CPython must shift all remaining references because the underlying representation is a contiguous array of pointers.
+
+`deque` is designed for that queue shape. The official docs describe appends and pops from either side as approximately `O(1)`, while list left-edge mutation incurs `O(n)` memory movement.
+
+```python
+# Works on Python 3.x
+queue = [1, 2, 3]
+first = queue.pop(0)
+print(first, queue)
+```
+
+```python
+# Works on Python 3.x
+from collections import deque
+
+queue = deque([1, 2, 3])
+first = queue.popleft()
+print(first, queue)
+```
+
+Local `timeit` measurements on this machine for `1000` operations over a `10000`-element container showed roughly:
+
+- `list.pop(0)`: about `1.0e-3` seconds
+- `deque.popleft()`: about `2.0e-5` seconds
+
+Do not treat those exact numbers as portable. The stable lesson is the algorithmic one: queue-like left-edge mutation is a deque workload, not a list workload.
+
+<SLabel>Binary buffers and zero-copy access</SLabel>
+
+`memoryview` exposes the buffer protocol. It lets you slice and mutate bytes-like storage without allocating a copied sub-buffer.
+
+```python
+# Works on Python 3.x
+buffer = bytearray(b"abcdefgh")
+view = memoryview(buffer)
+
+view[2:5] = b"XYZ"
+print(buffer)   # bytearray(b'abXYZfgh')
+```
+
+The view object itself is small and does not own the bytes. It holds metadata describing how to interpret another object's memory.
+
+Measured locally on CPython 3.12.3:
+
+- `sys.getsizeof(bytes(1000))` -> `1033`
+- `sys.getsizeof(bytearray(1000))` -> `1057`
+- `sys.getsizeof(memoryview(bytearray(1000)))` -> `184`
+
+That `184` bytes is the view wrapper, not a second 1000-byte copy.
+
+<SLabel>Version context</SLabel>
+
+`array.array`, `collections.deque`, and `memoryview` are stable Python 3 facilities. Current project guidance targets Python 3.10-3.14. Python 3.9 and below are End-of-Life.
+
+The exact byte counts in this guide are CPython 3.12.3, 64-bit measurements taken locally. They are useful for understanding cost shape, not for writing byte-exact production invariants.
+
+<SLabel>Edge cases and gotchas</SLabel>
+
+`deque` is not a universally faster list. Middle indexing is slower, slicing is not supported, and many APIs still expect ordinary sequences.
+
+`array.array` only works when every element fits the chosen type code. It is ideal for dense numeric buffers but not for mixed Python objects.
+
+`memoryview` is for bytes-like storage, not arbitrary object containers. You cannot create a memory view over a list of Python integers.
+
+<Callout type="warn">
+  If the data is one-pass, avoid materializing any container at all. A generator can beat every structure in memory usage because it stores control state instead of the full result.
+</Callout>
+
+<SLabel>Production usage</SLabel>
+
+Use:
+
+- `list` for general-purpose mutable sequences
+- `deque` for queues, recent-history buffers, and producer/consumer edges
+- `array.array` for compact numeric buffers and binary file I/O
+- `memoryview` for packet parsing, protocol frames, and binary slicing without copies
+
+```python
+# Works on Python 3.x
+from array import array
+
+def save_temperatures(readings, path):
+    payload = array("d", readings)
+    with open(path, "wb") as fp:
+        payload.tofile(fp)
+```
+
+When the goal is laziness rather than compact storage, use iterator pipelines from <CardRef id="memory-iterables" />.
+
+<SLabel>Further depth</SLabel>
+
+- [array module](https://docs.python.org/3/library/array.html)
+- [collections.deque](https://docs.python.org/3/library/collections.html#collections.deque)
+- [memoryview](https://docs.python.org/3/library/stdtypes.html#memoryview)
+- [sys.getsizeof](https://docs.python.org/3/library/sys.html#sys.getsizeof)

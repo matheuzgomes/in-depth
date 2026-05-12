@@ -1,0 +1,116 @@
+`del` removes a binding or container slot. It does not mean "destroy this object now." Object lifetime is governed by reachability, and the timing of reclamation depends on the interpreter.
+
+<SLabel>Core answer</SLabel>
+
+Use `del` to remove references from names, attributes, items, or slices. Use context managers or explicit cleanup for external resources. Do not use `__del__` as your normal correctness mechanism.
+
+```python
+# Works on Python 3.x
+payload = {"items": [1, 2, 3]}
+alias = payload
+
+del payload
+print(alias["items"])  # object is still alive through alias
+```
+
+<SLabel>Mechanism and GC</SLabel>
+
+The language-level rule is reachability: an object may be reclaimed after it becomes unreachable. CPython adds a concrete strategy on top of that:
+
+- immediate reclamation for many objects via reference counting
+- periodic cycle detection via the cyclic garbage collector
+
+```python
+# Works on Python 3.x
+import gc
+
+print(gc.get_threshold())
+print(gc.get_count())
+```
+
+Those thresholds and counters are CPython runtime tuning details, not language guarantees. They exist because pure reference counting cannot reclaim unreachable cycles.
+
+```python
+# Works on Python 3.x
+a = []
+b = [a]
+a.append(b)
+
+del a, b
+# The cycle is unreachable, but reference counting alone cannot reclaim it.
+```
+
+On interpreters such as PyPy, object reclamation timing can differ materially because the implementation is not centered on CPython-style immediate reference-count drops.
+
+<SLabel>Finalization and weak references</SLabel>
+
+`__del__` is a finalizer hook, not a destructor you control directly. Finalization timing can vary, interpreter shutdown can complicate it, and cycles plus finalizers are historically tricky.
+
+`weakref.finalize` is usually the safer observation mechanism when you need a callback attached to object lifetime without keeping the object alive.
+
+```python
+# Works on Python 3.x
+import gc
+import weakref
+
+class T:
+    pass
+
+obj = T()
+fin = weakref.finalize(obj, lambda: print("finalized"))
+print(fin.alive)
+del obj
+gc.collect()
+print(fin.alive)
+```
+
+<SLabel>Version context</SLabel>
+
+`del`, context managers, `gc`, and `weakref.finalize` are stable Python 3 facilities. Current project guidance targets Python 3.10-3.14. Python 3.9 and below are End-of-Life.
+
+The reachability rule is language-level. Immediate destruction on last-reference drop is a CPython-specific operational characteristic, not something to build correctness on across implementations.
+
+<SLabel>Edge cases and gotchas</SLabel>
+
+If cleanup affects correctness, you need deterministic cleanup:
+
+- `with` for files, locks, transactions, and sockets
+- `try/finally` for narrow manual lifetimes
+- explicit `close()` or `shutdown()` APIs when the lifecycle is part of your domain
+
+```python
+# Works on Python 3.x
+with open("events.log", encoding="utf-8") as fp:
+    for line in fp:
+        process(line)
+```
+
+Using `del` to "free memory now" is often cargo cult. It only helps when a reference would otherwise stay alive longer than necessary in the current scope.
+
+<Callout type="warn">
+  Garbage collection is a memory-management mechanism, not a reliable resource-management policy. If release timing matters, make it explicit.
+</Callout>
+
+<SLabel>Production usage</SLabel>
+
+Use `del` sparingly for large temporary objects inside long-running scopes when that genuinely reduces retained memory pressure.
+
+```python
+# Works on Python 3.x
+from pathlib import Path
+
+def summarize(path):
+    raw = Path(path).read_bytes()
+    header = raw[:128]
+    del raw
+    return header.hex()
+```
+
+For finalization without ownership, prefer `weakref.finalize`. For handler/file cleanup patterns, pair this with the logging guidance in <CardRef id="production-stdlib-logging" />.
+
+<SLabel>Further depth</SLabel>
+
+- [Language reference: the del statement](https://docs.python.org/3/reference/simple_stmts.html#the-del-statement)
+- [gc module](https://docs.python.org/3/library/gc.html)
+- [weakref.finalize](https://docs.python.org/3/library/weakref.html#weakref.finalize)
+- [Data model: object finalization](https://docs.python.org/3/reference/datamodel.html#object.__del__)

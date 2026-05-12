@@ -1,0 +1,805 @@
+{
+  "environment": {
+    "pythonVersion": "3.12.3",
+    "implementation": "CPython",
+    "platform": "Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.39",
+    "machine": "x86_64",
+    "system": "Linux",
+    "release": "6.6.87.2-microsoft-standard-WSL2",
+    "cpuCount": 16,
+    "generatedAtUtc": "2026-05-11T17:06:27+00:00"
+  },
+  "topics": {
+    "sequences-slicing": {
+      "title": "Measured slice copy cost",
+      "summary": "Discrete presets from local CPython timing runs. Results are machine- and build-specific.",
+      "controls": [
+        {
+          "id": "span",
+          "label": "Slice span",
+          "options": [
+            {
+              "id": "32",
+              "label": "32 items"
+            },
+            {
+              "id": "4096",
+              "label": "4,096 items"
+            }
+          ]
+        }
+      ],
+      "defaultSelection": {
+        "span": "32"
+      },
+      "presets": {
+        "32": {
+          "chartTitle": "Median copy time for a 32-item slice",
+          "xLabels": [
+            "1k",
+            "8k",
+            "64k",
+            "256k"
+          ],
+          "yUnit": "us",
+          "series": [
+            {
+              "label": "list[start:stop]",
+              "color": "#1a2e6e",
+              "values": [
+                0.13361016560035446,
+                0.15310883221294108,
+                0.13848444117077935,
+                0.1450599989362268
+              ]
+            },
+            {
+              "label": "list(islice(...))",
+              "color": "#c0392b",
+              "values": [
+                1.0912363334985762,
+                9.209798668355992,
+                74.42088055540808,
+                297.53206722186104
+              ]
+            }
+          ],
+          "metrics": [
+            {
+              "label": "Largest source list",
+              "value": "262,144 items"
+            },
+            {
+              "label": "Slice result size",
+              "value": "0.3 KiB"
+            },
+            {
+              "label": "Slice / islice gap",
+              "value": "2051.1x faster"
+            }
+          ],
+          "notes": [
+            "Both paths allocate a new result container. The list slice stays much cheaper because built-in slicing can copy contiguous references directly.",
+            "The copied result size comes from sys.getsizeof(result) on this environment."
+          ]
+        },
+        "4096": {
+          "chartTitle": "Median copy time for a 4096-item slice",
+          "xLabels": [
+            "1k",
+            "8k",
+            "64k",
+            "256k"
+          ],
+          "yUnit": "us",
+          "series": [
+            {
+              "label": "list[start:stop]",
+              "color": "#1a2e6e",
+              "values": [
+                0.8456815000196608,
+                6.225882665603422,
+                6.0787783392394585,
+                6.104931114047456
+              ]
+            },
+            {
+              "label": "list(islice(...))",
+              "color": "#c0392b",
+              "values": [
+                4.437019000761211,
+                32.4474720012707,
+                97.45972555214797,
+                319.4313694418977
+              ]
+            }
+          ],
+          "metrics": [
+            {
+              "label": "Largest source list",
+              "value": "262,144 items"
+            },
+            {
+              "label": "Slice result size",
+              "value": "32.1 KiB"
+            },
+            {
+              "label": "Slice / islice gap",
+              "value": "52.3x faster"
+            }
+          ],
+          "notes": [
+            "Both paths allocate a new result container. The list slice stays much cheaper because built-in slicing can copy contiguous references directly.",
+            "The copied result size comes from sys.getsizeof(result) on this environment."
+          ]
+        }
+      }
+    },
+    "dict-hash-tables": {
+      "title": "Measured lookup behavior",
+      "summary": "Median lookup timings from local CPython runs comparing keyed hash lookup to linear scanning.",
+      "controls": [
+        {
+          "id": "lookup",
+          "label": "Lookup kind",
+          "options": [
+            {
+              "id": "hit",
+              "label": "Existing key"
+            },
+            {
+              "id": "miss",
+              "label": "Missing key"
+            }
+          ]
+        }
+      ],
+      "defaultSelection": {
+        "lookup": "hit"
+      },
+      "presets": {
+        "hit": {
+          "chartTitle": "Hit lookups across growing key counts",
+          "xLabels": [
+            "1k",
+            "10k",
+            "100k"
+          ],
+          "yUnit": "us",
+          "series": [
+            {
+              "label": "dict lookup",
+              "color": "#1a2e6e",
+              "values": [
+                0.05580765995546244,
+                0.05512763003935106,
+                0.0662751624986413
+              ]
+            },
+            {
+              "label": "list scan",
+              "color": "#c0392b",
+              "values": [
+                7.526138336591733,
+                76.52481133603335,
+                797.1885099929447
+              ]
+            }
+          ],
+          "metrics": [
+            {
+              "label": "Largest dict lookup",
+              "value": "0.066 \u00b5s"
+            },
+            {
+              "label": "Largest list scan",
+              "value": "797.189 \u00b5s"
+            },
+            {
+              "label": "Container shell sizes",
+              "value": "dict 5120.1 KiB / list 781.3 KiB"
+            }
+          ],
+          "notes": [
+            "The dict stays effectively flat across these sizes because the probe count stays low on average.",
+            "The list scan grows with the number of pairs because it is linear search over Python objects."
+          ]
+        },
+        "miss": {
+          "chartTitle": "Miss lookups across growing key counts",
+          "xLabels": [
+            "1k",
+            "10k",
+            "100k"
+          ],
+          "yUnit": "us",
+          "series": [
+            {
+              "label": "dict lookup",
+              "color": "#1a2e6e",
+              "values": [
+                0.0689054949907586,
+                0.0644552000449039,
+                0.06634660003328463
+              ]
+            },
+            {
+              "label": "list scan",
+              "color": "#c0392b",
+              "values": [
+                15.251887666333158,
+                155.6271560014769,
+                1576.4260366753056
+              ]
+            }
+          ],
+          "metrics": [
+            {
+              "label": "Largest dict lookup",
+              "value": "0.066 \u00b5s"
+            },
+            {
+              "label": "Largest list scan",
+              "value": "1576.426 \u00b5s"
+            },
+            {
+              "label": "Container shell sizes",
+              "value": "dict 5120.1 KiB / list 781.3 KiB"
+            }
+          ],
+          "notes": [
+            "The dict stays effectively flat across these sizes because the probe count stays low on average.",
+            "The list scan grows with the number of pairs because it is linear search over Python objects."
+          ]
+        }
+      }
+    },
+    "sets-membership-views": {
+      "title": "Measured membership checks",
+      "summary": "Median membership timings from local CPython runs for hash-based sets versus linear containers.",
+      "controls": [
+        {
+          "id": "lookup",
+          "label": "Lookup kind",
+          "options": [
+            {
+              "id": "hit",
+              "label": "Present value"
+            },
+            {
+              "id": "miss",
+              "label": "Missing value"
+            }
+          ]
+        }
+      ],
+      "defaultSelection": {
+        "lookup": "hit"
+      },
+      "presets": {
+        "hit": {
+          "chartTitle": "Hit membership checks across growing collections",
+          "xLabels": [
+            "1k",
+            "10k",
+            "100k"
+          ],
+          "yUnit": "us",
+          "series": [
+            {
+              "label": "set membership",
+              "color": "#1a7a4a",
+              "values": [
+                0.05440460496174637,
+                0.05556782001804095,
+                0.05392519997258205
+              ]
+            },
+            {
+              "label": "list membership",
+              "color": "#c0392b",
+              "values": [
+                3.083213329470406,
+                30.731633329802815,
+                308.60909003725584
+              ]
+            }
+          ],
+          "metrics": [
+            {
+              "label": "Largest set lookup",
+              "value": "0.054 \u00b5s"
+            },
+            {
+              "label": "Largest list lookup",
+              "value": "308.609 \u00b5s"
+            },
+            {
+              "label": "Container shell sizes",
+              "value": "set 4096.2 KiB / list 781.3 KiB"
+            }
+          ],
+          "notes": [
+            "The set cost stays near-constant because the lookup is hash-based on average.",
+            "The list path is linear and keeps growing because each membership test may inspect many Python objects."
+          ]
+        },
+        "miss": {
+          "chartTitle": "Miss membership checks across growing collections",
+          "xLabels": [
+            "1k",
+            "10k",
+            "100k"
+          ],
+          "yUnit": "us",
+          "series": [
+            {
+              "label": "set membership",
+              "color": "#1a7a4a",
+              "values": [
+                0.04650921997381374,
+                0.04522092502156738,
+                0.0462675250673783
+              ]
+            },
+            {
+              "label": "list membership",
+              "color": "#c0392b",
+              "values": [
+                6.1195803330823155,
+                61.798613998689696,
+                622.7745000311794
+              ]
+            }
+          ],
+          "metrics": [
+            {
+              "label": "Largest set lookup",
+              "value": "0.046 \u00b5s"
+            },
+            {
+              "label": "Largest list lookup",
+              "value": "622.775 \u00b5s"
+            },
+            {
+              "label": "Container shell sizes",
+              "value": "set 4096.2 KiB / list 781.3 KiB"
+            }
+          ],
+          "notes": [
+            "The set cost stays near-constant because the lookup is hash-based on average.",
+            "The list path is linear and keeps growing because each membership test may inspect many Python objects."
+          ]
+        }
+      }
+    },
+    "memory-container-comparison": {
+      "title": "Measured container tradeoffs",
+      "summary": "Local measurements for shell size, iteration, and membership. These numbers are evidence for this environment, not universal constants.",
+      "controls": [
+        {
+          "id": "workload",
+          "label": "Workload",
+          "options": [
+            {
+              "id": "memory",
+              "label": "Shell size"
+            },
+            {
+              "id": "iterate",
+              "label": "Iteration"
+            },
+            {
+              "id": "membership",
+              "label": "Membership"
+            }
+          ]
+        }
+      ],
+      "defaultSelection": {
+        "workload": "memory"
+      },
+      "presets": {
+        "memory": {
+          "chartTitle": "Measured container shell size",
+          "xLabels": [
+            "128",
+            "4,096",
+            "65,536"
+          ],
+          "yUnit": "kib",
+          "series": [
+            {
+              "label": "list",
+              "color": "#1a2e6e",
+              "values": [
+                1.0546875,
+                32.0546875,
+                512.0546875
+              ]
+            },
+            {
+              "label": "tuple",
+              "color": "#6c3483",
+              "values": [
+                1.0390625,
+                32.0390625,
+                512.0390625
+              ]
+            },
+            {
+              "label": "set",
+              "color": "#1a7a4a",
+              "values": [
+                8.2109375,
+                128.2109375,
+                2048.2109375
+              ]
+            },
+            {
+              "label": "array.array",
+              "color": "#c0392b",
+              "values": [
+                0.578125,
+                16.078125,
+                256.078125
+              ]
+            }
+          ],
+          "metrics": [
+            {
+              "label": "list @ 65,536",
+              "value": "512.05 KiB"
+            },
+            {
+              "label": "tuple @ 65,536",
+              "value": "512.04 KiB"
+            },
+            {
+              "label": "set @ 65,536",
+              "value": "2048.21 KiB"
+            },
+            {
+              "label": "array.array @ 65,536",
+              "value": "256.08 KiB"
+            }
+          ],
+          "notes": [
+            "sys.getsizeof shows the outer container shell on this machine. Lists and tuples store references; array.array stores packed primitive values.",
+            "Sets spend more memory to keep a sparse hash table for fast membership."
+          ]
+        },
+        "iterate": {
+          "chartTitle": "Measured iteration cost via sum(container)",
+          "xLabels": [
+            "128",
+            "4,096",
+            "65,536"
+          ],
+          "yUnit": "us",
+          "series": [
+            {
+              "label": "list",
+              "color": "#1a2e6e",
+              "values": [
+                0.6426669957969959,
+                21.884561332020287,
+                364.0848599898163
+              ]
+            },
+            {
+              "label": "tuple",
+              "color": "#6c3483",
+              "values": [
+                0.6393919999633605,
+                22.7610396638435,
+                363.2687100034673
+              ]
+            },
+            {
+              "label": "set",
+              "color": "#1a7a4a",
+              "values": [
+                0.9728326646533484,
+                27.65311300269483,
+                447.4289779900573
+              ]
+            },
+            {
+              "label": "array.array",
+              "color": "#c0392b",
+              "values": [
+                0.8193173319644605,
+                66.00289299967699,
+                909.1089339926839
+              ]
+            }
+          ],
+          "metrics": [
+            {
+              "label": "list @ 65,536",
+              "value": "364.08 \u00b5s"
+            },
+            {
+              "label": "tuple @ 65,536",
+              "value": "363.27 \u00b5s"
+            },
+            {
+              "label": "set @ 65,536",
+              "value": "447.43 \u00b5s"
+            },
+            {
+              "label": "array.array @ 65,536",
+              "value": "909.11 \u00b5s"
+            }
+          ],
+          "notes": [
+            "sum(container) is a real runtime workload, not a synthetic complexity label.",
+            "Packed arrays stay competitive on dense numeric data because the storage is flat and the iteration avoids per-element Python object pointers."
+          ]
+        },
+        "membership": {
+          "chartTitle": "Measured membership cost",
+          "xLabels": [
+            "128",
+            "4,096",
+            "65,536"
+          ],
+          "yUnit": "us",
+          "series": [
+            {
+              "label": "list",
+              "color": "#1a2e6e",
+              "values": [
+                0.8201566670322791,
+                24.943922335902847,
+                403.826743325529
+              ]
+            },
+            {
+              "label": "tuple",
+              "color": "#6c3483",
+              "values": [
+                0.7198370003607124,
+                21.874384003846593,
+                352.7589033183176
+              ]
+            },
+            {
+              "label": "set",
+              "color": "#1a7a4a",
+              "values": [
+                0.0473756663268432,
+                0.05100300283326457,
+                0.05482332198880613
+              ]
+            },
+            {
+              "label": "array.array",
+              "color": "#c0392b",
+              "values": [
+                1.1170296687244747,
+                66.40168499628393,
+                1030.7331999744445
+              ]
+            }
+          ],
+          "metrics": [
+            {
+              "label": "list @ 65,536",
+              "value": "403.83 \u00b5s"
+            },
+            {
+              "label": "tuple @ 65,536",
+              "value": "352.76 \u00b5s"
+            },
+            {
+              "label": "set @ 65,536",
+              "value": "0.05 \u00b5s"
+            },
+            {
+              "label": "array.array @ 65,536",
+              "value": "1030.73 \u00b5s"
+            }
+          ],
+          "notes": [
+            "Set membership wins because it is hash-table lookup. The other three containers stay linear here.",
+            "array.array saves memory but it does not become a hash table; membership remains scan-based."
+          ]
+        }
+      }
+    },
+    "language-bytecode-dis": {
+      "title": "Measured opcode-side loop cost",
+      "summary": "Local timing for equivalent loops where the bytecode differs in how it resolves names.",
+      "controls": [],
+      "defaultSelection": {},
+      "presets": {
+        "default": {
+          "chartTitle": "Loop cost by name-resolution path",
+          "xLabels": [
+            "1k",
+            "10k",
+            "50k"
+          ],
+          "yUnit": "us",
+          "series": [
+            {
+              "label": "LOAD_FAST local",
+              "color": "#1a2e6e",
+              "values": [
+                54.52735989820212,
+                536.4503199234605,
+                2732.4199996655807
+              ]
+            },
+            {
+              "label": "LOAD_DEREF closure",
+              "color": "#6c3483",
+              "values": [
+                52.30472015682608,
+                631.6517997765914,
+                3181.877199676819
+              ]
+            },
+            {
+              "label": "LOAD_GLOBAL global",
+              "color": "#c0392b",
+              "values": [
+                56.62924028001726,
+                693.9262396190315,
+                3203.0496004153974
+              ]
+            }
+          ],
+          "metrics": [
+            {
+              "label": "Opcode counts",
+              "value": "local 21 / closure 20 / global 19"
+            },
+            {
+              "label": "50k loop local",
+              "value": "2732.420 \u00b5s"
+            },
+            {
+              "label": "50k loop global",
+              "value": "3203.050 \u00b5s"
+            }
+          ],
+          "notes": [
+            "The timing gap is real but small at this scale. Bytecode explains the shape; it does not replace end-to-end benchmarking.",
+            "Opcode counts come from dis.Bytecode on this same Python build."
+          ]
+        }
+      }
+    },
+    "runtime-gil-performance": {
+      "title": "Measured concurrency outcomes",
+      "summary": "Local timing that separates CPU-bound bytecode work from blocking I/O overlap on this CPython build.",
+      "controls": [
+        {
+          "id": "workload",
+          "label": "Workload",
+          "options": [
+            {
+              "id": "cpu",
+              "label": "CPU-bound loop"
+            },
+            {
+              "id": "io",
+              "label": "Blocking I/O"
+            }
+          ]
+        }
+      ],
+      "defaultSelection": {
+        "workload": "cpu"
+      },
+      "presets": {
+        "cpu": {
+          "chartTitle": "CPU-bound scaling",
+          "xLabels": [
+            "1 worker",
+            "2 workers",
+            "4 workers"
+          ],
+          "yUnit": "ms",
+          "series": [
+            {
+              "label": "sequential",
+              "color": "#1a2e6e",
+              "values": [
+                46.38125449855579,
+                92.74872799869627,
+                184.88382150098914
+              ]
+            },
+            {
+              "label": "threads",
+              "color": "#c0392b",
+              "values": [
+                52.52342049789149,
+                94.09435150155332,
+                189.04029450641247
+              ]
+            },
+            {
+              "label": "processes",
+              "color": "#1a7a4a",
+              "values": [
+                62.36509299924364,
+                53.358385994215496,
+                62.01945000066189
+              ]
+            }
+          ],
+          "metrics": [
+            {
+              "label": "4-worker sequential",
+              "value": "184.88 ms"
+            },
+            {
+              "label": "4-worker threads",
+              "value": "189.04 ms"
+            },
+            {
+              "label": "4-worker processes",
+              "value": "62.02 ms"
+            }
+          ],
+          "notes": [
+            "Threads do not buy CPU-bound Python bytecode parallelism here; the GIL keeps the threaded result near the sequential path.",
+            "Processes win at 4 workers on this machine because they bypass the GIL, at the cost of process startup and IPC."
+          ]
+        },
+        "io": {
+          "chartTitle": "Blocking I/O overlap",
+          "xLabels": [
+            "1 worker",
+            "2 workers",
+            "4 workers"
+          ],
+          "yUnit": "ms",
+          "series": [
+            {
+              "label": "sequential sleep",
+              "color": "#1a2e6e",
+              "values": [
+                20.116169507673476,
+                40.21439750067657,
+                80.39514598931419
+              ]
+            },
+            {
+              "label": "threads",
+              "color": "#1a7a4a",
+              "values": [
+                20.481570507399738,
+                20.724140500533395,
+                21.007046998420265
+              ]
+            }
+          ],
+          "metrics": [
+            {
+              "label": "4-worker sequential",
+              "value": "80.40 ms"
+            },
+            {
+              "label": "4-worker threads",
+              "value": "21.01 ms"
+            },
+            {
+              "label": "Per-task delay",
+              "value": "20 ms sleep"
+            }
+          ],
+          "notes": [
+            "Blocking sleep releases the GIL, so the thread pool overlaps waiting time effectively.",
+            "This is why threads still work well for many I/O-bound service integrations in CPython."
+          ]
+        }
+      }
+    }
+  }
+}

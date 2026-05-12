@@ -1,0 +1,17 @@
+Type hints are a contract for readers and static checkers. Python does not enforce most annotations at runtime.
+
+```python
+# Works on Python 3.9+ [PEP 585]
+from collections.abc import Iterable
+
+def normalize(names: Iterable[str]) -> list[str]:
+    return [name.strip().casefold() for name in names]
+
+print(normalize([" Ana ", "BO "]))
+```
+
+<Callout type="info">
+  Accept abstract protocols like <code>Iterable</code> or <code>Mapping</code>; return concrete types when callers need to know what they receive.
+</Callout>
+
+<GuideLink id="language-type-hints" />

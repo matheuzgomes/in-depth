@@ -1,0 +1,113 @@
+Decorators and closures are not separate magic features. They are consequences of Python functions being first-class objects with lexical scoping and function objects that can capture state.
+
+<SLabel>Core answer</SLabel>
+
+A decorator runs when the function definition executes, usually during module import, and rebinds the function name to whatever object the decorator returns.
+
+```python
+# Works on Python 3.x
+def trace(fn):
+    print("decorating", fn.__name__)
+    return fn
+
+@trace
+def run():
+    return "ok"
+```
+
+A closure is a function that retains access to free variables from an enclosing scope after that outer scope has returned.
+
+```python
+# Works on Python 3.x
+def make_averager():
+    values = []
+
+    def averager(value):
+        values.append(value)
+        return sum(values) / len(values)
+
+    return averager
+
+avg = make_averager()
+print(avg(10))
+print(avg(20))
+```
+
+<SLabel>Mechanism and closure cells</SLabel>
+
+Python uses lexical scoping: local, enclosing, global, then built-in name resolution. When an inner function references a variable from an enclosing function, CPython stores that binding in a closure cell.
+
+```python
+# Works on Python 3.x
+import dis
+
+def outer():
+    x = 10
+    def inner(y):
+        return x + y
+    return inner
+
+fn = outer()
+print(fn.__code__.co_freevars)
+print(fn.__closure__[0].cell_contents)
+dis.dis(fn)
+```
+
+On CPython, the bytecode for the inner function uses `LOAD_DEREF` to read from the closure cell. That detail is implementation-specific, but it makes the mechanism concrete: the value is not copied into the function body; it is referenced through stored closure state.
+
+`nonlocal` is required only when rebinding the outer name, not when mutating an object referenced by that name.
+
+```python
+# Works on Python 3.x
+def make_counter():
+    count = 0
+
+    def inc():
+        nonlocal count
+        count += 1
+        return count
+
+    return inc
+```
+
+<SLabel>Version context</SLabel>
+
+Decorators have been in Python since 2.4. `nonlocal` was added in Python 3 by [PEP 3104](https://peps.python.org/pep-3104/). Current project guidance targets Python 3.10-3.14. Python 3.9 and below are End-of-Life.
+
+<SLabel>Edge cases and gotchas</SLabel>
+
+Decorators add another Python call boundary. In very hot paths, that extra frame and argument forwarding cost can matter.
+
+Without `functools.wraps`, wrappers also lose metadata such as `__name__`, `__doc__`, and `__wrapped__`, which breaks introspection, debugging, and framework behavior.
+
+```python
+# Works on Python 3.x
+from functools import wraps
+from time import perf_counter
+
+def timed(fn):
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        start = perf_counter()
+        try:
+            return fn(*args, **kwargs)
+        finally:
+            elapsed = perf_counter() - start
+            print(f"{fn.__name__}: {elapsed:.6f}s")
+    return wrapper
+```
+
+<Callout type="warn">
+  Use closures for small amounts of hidden state. When the state has multiple operations, lifecycle concerns, or debugging importance, a class is often the clearer production abstraction.
+</Callout>
+
+<SLabel>Production usage</SLabel>
+
+Use closures for lightweight factories, accumulators, and callbacks. Use decorators for orthogonal concerns such as timing, tracing, retries, and registration. Type decorators carefully when they are public API surface; see <CardRef id="language-type-hints" />.
+
+<SLabel>Further depth</SLabel>
+
+- [Language reference: function definitions](https://docs.python.org/3/reference/compound_stmts.html#function-definitions)
+- [Data model: user-defined functions](https://docs.python.org/3/reference/datamodel.html#user-defined-functions)
+- [functools.wraps](https://docs.python.org/3/library/functools.html#functools.wraps)
+- [PEP 3104: Access to Names in Outer Scopes](https://peps.python.org/pep-3104/)

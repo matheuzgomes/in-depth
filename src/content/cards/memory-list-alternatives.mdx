@@ -1,0 +1,18 @@
+Lists are general-purpose containers. For numeric data, queues, and streaming pipelines, specialized containers avoid hidden allocation costs.
+
+```python
+# Works on Python 3.x
+from array import array
+from collections import deque
+
+readings = [21.5, 21.75, 22.0]
+samples = array("d", readings)    # packed C doubles
+window = deque(maxlen=60)         # O(1) append and popleft
+```
+
+<VerdictGrid items={[
+  { name: "array('d')", value: "packed C doubles", sub: "size depends on C double width", good: true },
+  { name: "list[float]", value: "refs + objects", sub: "flexible but heavier", good: false }
+]} />
+
+<GuideLink id="memory-list-alternatives" />

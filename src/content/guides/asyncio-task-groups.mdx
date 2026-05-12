@@ -1,0 +1,143 @@
+`asyncio` is Python's cooperative concurrency framework for I/O-bound work. It does not make CPU-bound Python code parallel by itself; it lets one thread keep making progress while tasks are waiting.
+
+<SLabel>Core answer</SLabel>
+
+`await` is the scheduling boundary. A coroutine that does long CPU work without awaiting blocks the entire event loop thread.
+
+```python
+# Works on Python 3.7+
+async def fetch(client, url):
+    response = await client.get(url)
+    return response.status_code, await response.text()
+```
+
+Use `TaskGroup` in Python 3.11+ when several child tasks belong to one parent operation and should succeed or fail as a unit.
+
+```python
+# Requires Python 3.11+
+import asyncio
+
+async def load_user_page(user_id):
+    async with asyncio.TaskGroup() as tg:
+        user_task = tg.create_task(fetch_user(user_id))
+        orders_task = tg.create_task(fetch_orders(user_id))
+
+    return user_task.result(), orders_task.result()
+```
+
+<SLabel>Mechanism and scheduling</SLabel>
+
+The event loop runs ready callbacks and tasks. When a coroutine awaits an incomplete awaitable, its task is suspended and the loop can run another ready task. This is cooperative scheduling: progress depends on hitting await points.
+
+```python
+# Works on Python 3.7+
+import asyncio
+
+async def worker(name, delay):
+    print("start", name)
+    await asyncio.sleep(delay)
+    print("done", name)
+
+async def main():
+    await asyncio.gather(worker("a", 0.2), worker("b", 0.1))
+
+asyncio.run(main())
+```
+
+CPython details such as selector/proactor implementations and internal task objects are not the portable contract. The durable rules are the semantics of coroutines, tasks, cancellation, and the documented `asyncio` APIs.
+
+<SLabel>TaskGroup failure semantics</SLabel>
+
+`TaskGroup` is not just a task collector. Its key value is structured failure handling. The official docs specify:
+
+- if one child task fails with a non-cancellation exception, the remaining tasks are cancelled
+- once the group exits, those failures are raised as an `ExceptionGroup` or `BaseExceptionGroup`
+- `KeyboardInterrupt` and `SystemExit` are treated specially and re-raised
+
+That behavior is much safer than "fire off tasks and hope you remembered to await them all."
+
+```python
+# Requires Python 3.11+
+import asyncio
+
+async def handle_request(user_id):
+    try:
+        async with asyncio.TaskGroup() as tg:
+            profile = tg.create_task(load_profile(user_id))
+            tg.create_task(write_audit_event(user_id))
+    except* OSError as group:
+        raise RuntimeError("request dependencies failed") from group
+
+    return profile.result()
+```
+
+<SLabel>Bound fan-out and blocking work</SLabel>
+
+Unbounded concurrency can overload your process, upstream service, connection pool, or file descriptor limits. Bound fan-out explicitly.
+
+```python
+# Works on Python 3.7+
+import asyncio
+
+async def fetch_all(urls, client, limit=20):
+    semaphore = asyncio.Semaphore(limit)
+
+    async def one(url):
+        async with semaphore:
+            return await client.get(url)
+
+    return await asyncio.gather(*(one(url) for url in urls))
+```
+
+Blocking file I/O, compression, JSON parsing of huge payloads, and synchronous clients still block the event loop if called directly. `asyncio.to_thread()` can move blocking call sites to a worker thread, but that is mainly for blocking I/O or C extensions that release the GIL. Pure Python CPU work still contends on the GIL.
+
+```python
+# Works on Python 3.9+
+import asyncio
+import json
+from pathlib import Path
+
+async def load_json(path):
+    text = await asyncio.to_thread(Path(path).read_text, encoding="utf-8")
+    return json.loads(text)
+```
+
+<SLabel>Version context</SLabel>
+
+`asyncio.run()` is Python 3.7+. `asyncio.to_thread()` is Python 3.9+. `asyncio.TaskGroup` is Python 3.11+. Current project guidance targets Python 3.10-3.14. Python 3.9 and below are End-of-Life.
+
+`ExceptionGroup` and `except*` handling are part of Python 3.11+, which is why structured task failure handling becomes substantially cleaner there.
+
+<SLabel>Edge cases and gotchas</SLabel>
+
+Cancellation is part of normal control flow in `asyncio`. Swallowing `CancelledError` casually can break shutdown and timeout behavior.
+
+`asyncio.gather()` and `TaskGroup` are not equivalent:
+
+- `gather()` is result aggregation
+- `TaskGroup` is lifecycle and failure-structure management
+
+Use the one whose semantics match the operation.
+
+<Callout type="warn">
+  Async is not a shortcut around CPU limits. For CPU-bound Python workloads, measure first and then consider multiprocessing or native code that releases the GIL.
+</Callout>
+
+<SLabel>Production usage</SLabel>
+
+Use:
+
+- `TaskGroup` for "these subtasks belong to one request"
+- `gather()` for "I need these results collected"
+- semaphores or queues to cap concurrency
+- `to_thread()` only at well-defined blocking boundaries
+
+Pair async code with safe structured logging from <CardRef id="production-stdlib-logging" /> and explicit backpressure design. Most production `asyncio` failures are not syntax problems; they are overload, cancellation, timeout, and shutdown-discipline problems.
+
+<SLabel>Further depth</SLabel>
+
+- [asyncio](https://docs.python.org/3/library/asyncio.html)
+- [Coroutines and tasks](https://docs.python.org/3/library/asyncio-task.html)
+- [asyncio.TaskGroup](https://docs.python.org/3/library/asyncio-task.html#task-groups)
+- [asyncio.to_thread](https://docs.python.org/3/library/asyncio-task.html#asyncio.to_thread)
+- [Language reference: coroutine function definition](https://docs.python.org/3/reference/compound_stmts.html#coroutine-function-definition)

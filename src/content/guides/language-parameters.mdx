@@ -1,0 +1,90 @@
+A Python function signature is executable API design. It controls how arguments bind, which names are public, whether options are explicit at the call site, and how much allocation or ambiguity each call introduces.
+
+<SLabel>Core answer</SLabel>
+
+Use ordinary positional-or-keyword parameters for the stable core of the operation. Use `*` to force options to be keyword-only. Use `/` to make parameters positional-only when their names are not part of the public contract.
+
+```python
+# Requires Python 3.8+ [PEP 570]
+def resize(image, width, height, /, *, keep_aspect=True, quality=85):
+    return (image, width, height, keep_aspect, quality)
+
+resize("photo.jpg", 800, 600, keep_aspect=False, quality=90)
+```
+
+Keyword-only options are not cosmetic. They prevent opaque call sites such as `resize(img, 800, 600, False, 90)` where booleans and tuning numbers lose meaning.
+
+<SLabel>Mechanism and binding</SLabel>
+
+Before the function body runs, Python binds arguments to parameters according to the call rules in the language reference. Extra positional arguments become a tuple via `*args`. Extra keyword arguments become a dict via `**kwargs`.
+
+```python
+# Works on Python 3.x
+import inspect
+
+def sample(a, b=1, /, c=2, *, d=3, **kw):
+    return a, b, c, d, kw
+
+print(sample.__defaults__)      # positional defaults
+print(sample.__kwdefaults__)    # keyword-only defaults
+print(inspect.signature(sample))
+```
+
+On CPython, modern call performance is helped by optimizations such as vectorcall, but that does not change the semantic model: `*args` still means a tuple object is logically created, and `**kwargs` still means a mapping of extra keywords.
+
+```python
+# Works on Python 3.x
+def tag(name, *content, class_=None, **attrs):
+    if class_ is not None:
+        attrs["class"] = class_
+    attr_text = "".join(f' {k}="{v}"' for k, v in sorted(attrs.items()))
+    body = "".join(content)
+    return f"<{name}{attr_text}>{body}</{name}>"
+
+print(tag("p", "hello", class_="lead", id="intro"))
+```
+
+<SLabel>Version context</SLabel>
+
+Keyword-only parameters came from [PEP 3102](https://peps.python.org/pep-3102/). Positional-only syntax for Python functions came from [PEP 570](https://peps.python.org/pep-0570/) in Python 3.8. Current project guidance targets Python 3.10-3.14. Python 3.9 and below are End-of-Life.
+
+<SLabel>Edge cases and gotchas</SLabel>
+
+Open-ended `**kwargs` signatures weaken the API boundary if you do not validate them. Unknown options should usually fail immediately with `TypeError`, not drift deeper into the call graph.
+
+```python
+# Works on Python 3.x
+def configure(required, **options):
+    allowed = {"timeout", "retries"}
+    unknown = options.keys() - allowed
+    if unknown:
+        raise TypeError(f"unknown options: {sorted(unknown)}")
+    return required, options
+```
+
+Remember that defaults are stored on the function object and reused. Mutable defaults therefore become shared state; see <CardRef id="language-mutable-defaults" />.
+
+<Callout type="tip">
+  Prefer explicit parameters until you have a real adaptation or forwarding boundary. Open-ended signatures move errors from review time to runtime.
+</Callout>
+
+<SLabel>Production usage</SLabel>
+
+Use `/` when parameter names are an implementation detail or may change later. Use `*` when readability and caller safety matter more than brevity. Use explicit sentinels when `None` is a real business value.
+
+```python
+# Requires Python 3.8+ [PEP 570]
+_missing = object()
+
+def lookup(key, /, default=_missing, *, case_sensitive=True):
+    if default is _missing:
+        return f"raise KeyError for {key!r}"
+    return default, case_sensitive
+```
+
+<SLabel>Further depth</SLabel>
+
+- [Language reference: calls](https://docs.python.org/3/reference/expressions.html#calls)
+- [Python tutorial: defining functions](https://docs.python.org/3/tutorial/controlflow.html#defining-functions)
+- [PEP 3102: Keyword-Only Arguments](https://peps.python.org/pep-3102/)
+- [PEP 570: Python Positional-Only Parameters](https://peps.python.org/pep-0570/)

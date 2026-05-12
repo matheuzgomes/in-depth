@@ -1,0 +1,214 @@
+Lists and tuples are both container sequences, but they are optimized for different contracts. A tuple is a fixed-size record of object references. A list is a resizable array of object references with spare capacity reserved for future mutation.
+
+<SLabel>Core answer</SLabel>
+
+Use a tuple when the size and ordering are part of the meaning of the value. Use a list when the collection is expected to grow, shrink, reorder, or be mutated in place.
+
+Both containers store references, not inline Python values. The distinction is not "tuple stores data directly, list stores pointers." Both store pointers to Python objects. The difference is that a tuple stores exactly `n` reference slots inside the tuple object, while a list stores a pointer to a separately managed resizable reference array.
+
+```python
+# Works on Python 3.x
+city = ("Sao Paulo", "BR", 12_000_000)
+pipeline = ["parse", "validate"]
+pipeline.append("store")
+
+print(city)
+print(pipeline)
+```
+
+Tuple immutability is shallow: the tuple shape cannot change, but mutable objects inside it can still be mutated through the stored references.
+
+```python
+# Works on Python 3.x
+record = ("batch-1", [])
+record[1].append("row-1")
+print(record)
+```
+
+<SLabel>Mechanism and internals</SLabel>
+
+On CPython, the tuple object contains its header and its item-reference slots in one fixed-size allocation. A list object contains its own header plus a pointer to a separate dynamically allocated array of item references. That extra indirection is what makes resizing possible.
+
+This is CPython-specific implementation detail, not a language guarantee. The language-level contract is only mutability and sequence behavior. The memory layout and exact byte counts can differ across interpreter versions, builds, and implementations such as PyPy.
+
+For a 64-bit CPython 3.12.3 build, the container-only cost measured with [`sys.getsizeof`](https://docs.python.org/3/library/sys.html#sys.getsizeof) looks like this:
+
+- Empty tuple: `40` bytes
+- Empty list: `56` bytes
+- Tuple of 10 references: `120` bytes
+- List of 10 references created from a known-size iterable: `136` bytes
+
+That yields a simple CPython 3.12 rule of thumb for container-only cost:
+
+- Tuple: about `40 + 8 * n` bytes
+- List with exactly `n` allocated slots: about `56 + 8 * n` bytes
+
+So for the same number of elements, the list container itself is typically about `16` bytes larger than the tuple container on this build.
+
+```python
+# Works on Python 3.x
+# Example byte counts below were measured on CPython 3.12.3, 64-bit Linux.
+import sys
+
+for n in (0, 1, 2, 3, 10, 16):
+    t = tuple(range(n))
+    l = list(range(n))
+    print(
+        n,
+        sys.getsizeof(t),
+        sys.getsizeof(l),
+    )
+```
+
+`sys.getsizeof()` measures only the container object itself. It does not recursively include the objects referenced by the container. For example, a list of 10 floats contains:
+
+- the list container
+- 10 pointer slots inside or behind the container
+- 10 separate `float` objects, each with its own object header and payload
+
+```python
+# Works on Python 3.x
+# Example byte counts below were measured on CPython 3.12.3, 64-bit Linux.
+import sys
+
+n = 10
+list_total = sys.getsizeof([1.0] * n) + n * sys.getsizeof(1.0)
+tuple_total = sys.getsizeof((1.0,) * n) + n * sys.getsizeof(1.0)
+
+print(list_total)   # 376 on CPython 3.12.3, 64-bit
+print(tuple_total)  # 360 on CPython 3.12.3, 64-bit
+```
+
+The `16`-byte gap remains because the element objects are identical in both cases; only the container representation differs.
+
+<SLabel>Allocation and performance</SLabel>
+
+The main reason lists cost more is not just the larger base header. It is the resizing strategy. CPython over-allocates list capacity so repeated `append()` is amortized `O(1)` instead of reallocating on every push. Tuples do not need that mechanism because they never grow.
+
+```python
+# Works on Python 3.x
+# Example byte counts below were measured on CPython 3.12.3, 64-bit Linux.
+import sys
+
+items = []
+for value in range(12):
+    print(len(items), sys.getsizeof(items))
+    items.append(value)
+```
+
+On the interpreter used for these measurements, append growth went like this:
+
+- length `0`: `56` bytes
+- length `1` through `4`: `88` bytes
+- length `5` through `8`: `120` bytes
+- length `9` through `12`: `184` bytes
+
+That spare capacity improves append throughput, but it means a list can consume noticeably more memory than a tuple with the same current logical length if it reached that length through incremental growth.
+
+Algorithmically, the important differences are:
+
+- Tuple indexing: `O(1)`
+- List indexing: `O(1)`
+- Tuple construction from known values: fixed-size allocation
+- List append: amortized `O(1)` because of overallocation
+- List insert/delete near the front or middle: `O(n)` because references must shift
+
+There is also a locality effect. A tuple's reference slots live contiguously with the tuple object itself. A list requires one extra pointer chase from the list object to the separately allocated reference array. That does not usually dominate whole-program performance, but in very hot loops and memory-dense workloads it can show up in cache behavior.
+
+<SLabel>Compilation and copying</SLabel>
+
+Tuples also have advantages when the value is known at compile time. In current CPython, a tuple literal of constants can be emitted as one constant object, while a list literal must still build a new mutable list at runtime.
+
+```python
+# Works on Python 3.x
+import dis
+
+def states_tuple():
+    return ("open", "closed", "pending")
+
+def states_list():
+    return ["open", "closed", "pending"]
+
+dis.dis(states_tuple)
+dis.dis(states_list)
+```
+
+On CPython 3.12, the tuple version uses `RETURN_CONST`, while the list version still performs list construction with `BUILD_LIST` and `LIST_EXTEND`. That is another CPython optimization detail, not a language guarantee, but it explains why tuples are often slightly cheaper for constant fixed records.
+
+Copying shows the semantic difference directly:
+
+```python
+# Works on Python 3.x
+t = (1, 2, 3)
+l = [1, 2, 3]
+
+print(tuple(t) is t)  # True
+print(list(l) is l)   # False
+```
+
+Reusing the same tuple is safe because tuples are immutable. Reusing the same list would violate caller expectations because either alias could mutate it.
+
+<SLabel>Version context</SLabel>
+
+The semantic differences between list and tuple are stable across Python 3. Current project guidance targets Python 3.10-3.14. Python 3.9 and below are End-of-Life.
+
+The exact byte counts in this guide are CPython 3.12.3, 64-bit measurements taken locally. They are useful because they expose the shape of the costs, but they are not language guarantees. Different CPython releases or alternative interpreters may report different sizes.
+
+<SLabel>Edge cases and gotchas</SLabel>
+
+Do not use tuple as a vague synonym for "faster list." The memory savings are real but modest for ordinary object references: usually one pointer-sized slot difference in base overhead plus the absence of spare capacity. The bigger gain is semantic clarity: fixed shape, immutability of the container, and safer reuse.
+
+<Callout type="warn">
+  A tuple is hashable only if all of its elements are hashable. A tuple containing a list is immutable as a container but still unhashable and still exposes mutation through that inner list.
+</Callout>
+
+```python
+# Works on Python 3.x
+print(hash(("region", "BR")))
+
+try:
+    hash(("region", []))
+except TypeError as exc:
+    print(exc)
+```
+
+If the workload is numeric and dense, neither list nor tuple is the real memory-efficient choice. A flat container such as `array.array` avoids one Python object header per element and can reduce memory dramatically.
+
+```python
+# Works on Python 3.x
+# Example byte counts below were measured on CPython 3.12.3, 64-bit Linux.
+import sys
+from array import array
+
+n = 10
+print(sys.getsizeof([1.0] * n) + n * sys.getsizeof(1.0))     # 376
+print(sys.getsizeof((1.0,) * n) + n * sys.getsizeof(1.0))    # 360
+print(sys.getsizeof(array("d", [1.0] * n)))                  # 160
+```
+
+See <CardRef id="memory-list-alternatives" /> for that tradeoff.
+
+<SLabel>Production usage</SLabel>
+
+Use tuples for:
+
+- return values whose arity is fixed and small
+- coordinate-like records
+- immutable cache keys
+- fixed snapshots that should not be mutated accidentally
+
+Use lists for:
+
+- builders and accumulators
+- queues only if you mutate at the right end; otherwise prefer `deque`
+- collections with repeated append or in-place update
+- APIs where callers are expected to mutate the returned sequence
+
+If the shape needs field names, not positional indexing, prefer `NamedTuple` or `@dataclass(frozen=True)` over a long anonymous tuple. See <CardRef id="classes-data-builders" />.
+
+<SLabel>Further depth</SLabel>
+
+- [Sequence types: list, tuple, range](https://docs.python.org/3/library/stdtypes.html#sequence-types-list-tuple-range)
+- [sys.getsizeof](https://docs.python.org/3/library/sys.html#sys.getsizeof)
+- [dis module](https://docs.python.org/3/library/dis.html)
+- [Data model: objects, values, and types](https://docs.python.org/3/reference/datamodel.html#objects-values-and-types)

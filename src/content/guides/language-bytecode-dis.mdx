@@ -1,0 +1,301 @@
+import { bytecodeLabData } from "@/data/simulations"
+
+Python bytecode is the instruction stream CPython executes after compiling source into a code object. It is one of the most useful interpreter-level tools for explaining why code behaves the way it does, but it is also one of the easiest places to overclaim. Bytecode can explain **execution shape**. It does not replace measurement, algorithm analysis, or knowledge of C-level built-ins.
+
+<SLabel>Core answer</SLabel>
+
+Use the `dis` module when you need to answer questions like:
+
+- which names are loaded as locals, globals, or closure cells?
+- is this loop doing repeated attribute lookup and Python-level calls?
+- is there a dedicated opcode such as `LIST_APPEND` or `MATCH_SEQUENCE`?
+- did CPython compile this into one straightforward instruction path or several dispatch steps?
+
+```python
+# Works on Python 3.x
+import dis
+
+def total(xs):
+    return [x * 2 for x in xs]
+
+dis.dis(total)
+```
+
+The critical boundary is this:
+
+- bytecode is **CPython interpreter work**
+- it is not the same thing as machine code
+- fewer or simpler bytecode steps can reduce overhead
+- but real performance still depends on data structure choice, object allocation, C-level built-ins, specialization, and algorithmic complexity
+
+<BytecodeLab data={bytecodeLabData} />
+
+<SLabel>What bytecode is</SLabel>
+
+On CPython, source code is compiled into a **code object**. That code object contains:
+
+- constants
+- local-variable metadata
+- names
+- free-variable metadata
+- an instruction stream that CPython's bytecode interpreter executes
+
+That is why functions expose attributes such as:
+
+- `__code__.co_consts`
+- `__code__.co_varnames`
+- `__code__.co_names`
+- `__code__.co_freevars`
+
+```python
+# Works on Python 3.x
+def make_adder(base):
+    def add(x):
+        return base + x
+    return add
+
+fn = make_adder(10)
+print(fn.__code__.co_varnames)
+print(fn.__code__.co_freevars)
+print(fn.__code__.co_consts)
+```
+
+This is not just trivia. It tells you what the interpreter thinks your function depends on:
+
+- fast locals
+- global names
+- captured outer-scope names
+- embedded constants
+
+That helps explain why nearby-looking code can execute through meaningfully different paths.
+
+<SLabel>Mechanism: source, code objects, and interpreter dispatch</SLabel>
+
+The simplified CPython pipeline is:
+
+1. parse source into an abstract syntax tree
+2. compile that tree into a code object
+3. execute the code object's bytecode in the evaluation loop
+
+In current CPython, the instruction set is version-sensitive and implementation-specific. The language guarantee is Python behavior; the exact opcode names are not portable promises.
+
+For example, locals and closure cells are not loaded the same way:
+
+```python
+# Works on Python 3.x
+import dis
+
+def outer():
+    base = 10
+    def inner(x):
+        return base + x
+    return inner
+
+fn = outer()
+dis.dis(fn)
+```
+
+On current CPython, that closure read shows up as `LOAD_DEREF`, while a plain local read shows up as `LOAD_FAST`. That does **not** mean closure code is inherently "bad." It means the interpreter is following a different semantic path because the name lives in a closure cell, not the fast-locals array.
+
+See also <CardRef id="language-decorators-closures" /> for the scope side of the same mechanism.
+
+<SLabel>How to use the dis module</SLabel>
+
+The two most useful entry points are:
+
+- `dis.dis(...)` for human-readable disassembly
+- `dis.get_instructions(...)` for structured instruction objects
+
+```python
+# Works on Python 3.x
+import dis
+
+def scale(x, y):
+    return x * y
+
+dis.dis(scale)
+
+for ins in dis.get_instructions(scale):
+    print(ins.opname, ins.argrepr)
+```
+
+`dis.get_instructions` is often the better choice if you want to:
+
+- inspect opcodes programmatically
+- filter specific instruction kinds
+- build your own reports or teaching tools
+
+For plain debugging or education, `dis.dis` is usually enough.
+
+On current CPython, `dis.dis` also exposes version-sensitive options for cache/specialization visibility:
+
+```python
+# Requires Python 3.11+ [PEP 659]
+import dis
+
+def total(xs):
+    return sum(xs)
+
+dis.dis(total)
+dis.dis(total, show_caches=True, adaptive=True)
+```
+
+Those extra views are useful when you want to inspect modern CPython's specializing interpreter behavior. They are not portable language-level contracts.
+
+<SLabel>Why bytecode can explain speed</SLabel>
+
+Bytecode becomes especially informative when two snippets are semantically similar but one requires more interpreter work.
+
+List comprehension vs manual append loop is the standard example:
+
+```python
+# Works on Python 3.x
+import dis
+
+def manual(rows):
+    out = []
+    for row in rows:
+        out.append(row * 2)
+    return out
+
+def comp(rows):
+    return [row * 2 for row in rows]
+
+dis.dis(manual)
+dis.dis(comp)
+```
+
+On current CPython 3.12, the manual loop performs repeated:
+
+- `LOAD_ATTR` for `append`
+- `CALL` to invoke the method
+
+while the comprehension uses a dedicated `LIST_APPEND` path inside its compiled loop.
+
+That helps explain why simple comprehensions often benchmark better. The key point is not "comprehensions are magic." The key point is:
+
+- fewer Python-level dispatch steps
+- less repeated lookup/call overhead
+- better interpreter-level execution shape for that narrow case
+
+The same style of reasoning helps with:
+
+- local vs global name access (`LOAD_FAST` vs `LOAD_GLOBAL`)
+- closure access (`LOAD_DEREF`)
+- dedicated matching opcodes in structural pattern matching
+
+See:
+
+- <CardRef id="sequences-pattern-matching" />
+- <CardRef id="memory-tuples-lists" />
+
+<SLabel>Why bytecode does not settle performance by itself</SLabel>
+
+This is the production trap. Bytecode can explain overhead, but it does **not** fully explain runtime cost.
+
+Reasons:
+
+- the expensive part may be C-level work inside a builtin or extension
+- allocation and object creation may dominate
+- hash-table behavior may dominate
+- branch predictability and cache locality may dominate
+- algorithmic complexity may dwarf opcode overhead
+- adaptive specialization in CPython 3.11+ can change the effective execution path after warm-up
+
+```python
+# Works on Python 3.x
+import timeit
+
+print(timeit.timeit("[x * 2 for x in range(1000)]", number=10000))
+print(timeit.timeit("""
+out = []
+for x in range(1000):
+    out.append(x * 2)
+""", number=10000))
+```
+
+The right workflow is:
+
+1. identify a hot path
+2. benchmark or profile it
+3. inspect bytecode if the question is interpreter overhead or execution shape
+4. change the code only if the result still makes sense at the API/readability level
+
+<Callout type="warn">
+  "This has fewer opcodes" is not a complete performance argument. If the hot cost is inside object creation, hashing, I/O, or a C extension, bytecode counts can be almost irrelevant.
+</Callout>
+
+<SLabel>Version context</SLabel>
+
+Current project guidance targets Python 3.10-3.14. Python 3.9 and below are End-of-Life.
+
+Important version facts:
+
+- `dis` has existed for a long time, so basic disassembly examples are stable Python 3 material
+- CPython 3.11 introduced the specializing adaptive interpreter [PEP 659]
+- exact opcode names, cache layout, jump shapes, and disassembly formatting changed materially in 3.11+
+- code that inspects bytecode text output should be treated as version-sensitive tooling
+
+This means two things:
+
+- teaching at the level of `LOAD_FAST`, `LOAD_GLOBAL`, `LOAD_DEREF`, `LIST_APPEND`, and `CALL` is still useful
+- copying exact disassembly screenshots across versions is risky
+
+When you compare bytecode, compare it on the Python version you actually deploy.
+
+<SLabel>Edge cases and gotchas</SLabel>
+
+Do not confuse bytecode with:
+
+- AST structure
+- machine code
+- JIT output from another implementation
+
+Also do not present CPython opcode behavior as a Python language guarantee. PyPy, MicroPython, and other implementations do not have to expose or optimize the same instruction stream the same way.
+
+Another trap: `dis` output is observational, not normative. It tells you what this interpreter version emitted, not what future versions must emit.
+
+```python
+# Works on Python 3.x
+import dis
+
+def classify(x):
+    return x + 1
+
+print(classify.__code__.co_varnames)
+print(classify.__code__.co_names)
+dis.dis(classify)
+```
+
+That output is great for diagnosis. It is not a contract you should build hard production logic around unless you own the version lock and the maintenance cost.
+
+<SLabel>Production usage</SLabel>
+
+Use bytecode inspection when:
+
+- a hot path seems dominated by Python-level overhead
+- you need to explain a benchmark result
+- you want to understand closure/global/local behavior
+- you are teaching or debugging interpreter-level execution shape
+
+Do not use bytecode inspection as a reflex for every optimization question. Reach for it when the question is specifically about:
+
+- dispatch overhead
+- repeated method lookup
+- call boundaries
+- specialized/dedicated interpreter paths
+
+Good production practice:
+
+- write the clearest correct code first
+- measure
+- inspect bytecode if the measurement suggests interpreter overhead matters
+- keep the optimized version only if the gain is real and the code stays defensible
+
+<SLabel>Further depth</SLabel>
+
+- [dis module](https://docs.python.org/3/library/dis.html)
+- [Data model: code objects](https://docs.python.org/3/reference/datamodel.html#code-objects)
+- [Execution model](https://docs.python.org/3/reference/executionmodel.html)
+- [CPython Developer Guide](https://devguide.python.org/internals/interpreter/)
+- [PEP 659: Specializing Adaptive Interpreter](https://peps.python.org/pep-0659/)

@@ -1,0 +1,25 @@
+Decorators run at import time and replace one callable with another. Closures are how wrappers remember the original function and configuration.
+
+```python
+# Works on Python 3.x
+from functools import wraps
+
+def traced(fn):
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        print(fn.__name__, args, kwargs)
+        return fn(*args, **kwargs)
+    return wrapper
+
+@traced
+def add(a, b):
+    return a + b
+
+print(add(2, 3))
+```
+
+<Callout type="tip">
+  Always use <code>functools.wraps</code>; tools that inspect signatures and names depend on it.
+</Callout>
+
+<GuideLink id="language-decorators-closures" />

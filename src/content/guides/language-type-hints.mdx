@@ -1,0 +1,116 @@
+Type hints are design-time contracts for readers, editors, and static analyzers. They do not enforce runtime correctness unless your code adds validation or dispatch behavior that consumes the annotations.
+
+<SLabel>Core answer</SLabel>
+
+Annotate public boundaries, accept abstract protocols where callers may provide many concrete implementations, and return concrete types when the caller needs predictable operations.
+
+```python
+# Works on Python 3.9+ [PEP 585]
+from collections.abc import Iterable, Mapping
+
+def render(headers: Mapping[str, str], rows: Iterable[str]) -> list[str]:
+    prefix = headers.get("prefix", "")
+    return [prefix + row for row in rows]
+```
+
+At runtime, ordinary Python execution still happens. The interpreter does not reject a wrong type just because a hint exists.
+
+```python
+# Works on Python 3.x
+def double(x: int) -> int:
+    return x * 2
+
+print(double("ha"))  # 'haha'
+```
+
+<SLabel>Mechanism and runtime behavior</SLabel>
+
+Function annotations are stored on `__annotations__`. Class annotations are visible to tools and to libraries such as `dataclasses`, but Python itself does not automatically validate them.
+
+```python
+# Works on Python 3.x
+def connect(host: str, port: int = 5432) -> tuple[str, int]:
+    return host, port
+
+print(connect.__annotations__)
+```
+
+`Any` and `object` are not interchangeable. `Any` disables static checking for that value. `object` accepts any runtime object but forces explicit narrowing before type-specific operations.
+
+```python
+# Works on Python 3.x
+from typing import Any
+
+def unsafe(value: Any):
+    return value.made_up_method()
+
+def safer(value: object):
+    if isinstance(value, str):
+        return value.casefold()
+    return repr(value)
+```
+
+Parameterized built-in generics such as `list[int]` are for annotation meaning, not runtime `isinstance` checks.
+
+```python
+# Works on Python 3.9+ [PEP 585]
+try:
+    isinstance([1, 2, 3], list[int])
+except TypeError as exc:
+    print(exc)
+```
+
+<SLabel>Version context</SLabel>
+
+Built-in generic aliases like `list[str]` are Python 3.9+ [PEP 585]. The union operator `T | U` is Python 3.10+ [PEP 604]. Current project guidance targets Python 3.10-3.14. Python 3.9 and below are End-of-Life, so modern syntax is the baseline unless you are explicitly maintaining an older fleet.
+
+```python
+# Requires Python 3.10+ [PEP 604]
+def find_user(name: str) -> dict[str, str] | None:
+    if not name:
+        return None
+    return {"name": name}
+```
+
+<SLabel>Edge cases and gotchas</SLabel>
+
+Do not confuse "optional value" with "optional parameter." `str | None` means the value may be `None`. The parameter becomes optional only if it has a default.
+
+```python
+# Requires Python 3.10+ [PEP 604]
+def parse_limit(raw: str | None = None) -> int:
+    if raw is None:
+        return 100
+    return int(raw)
+```
+
+If code needs evaluated annotations at runtime, use `typing.get_type_hints()` instead of assuming raw `__annotations__` already contain the final objects.
+
+<Callout type="warn">
+  Type hints are not input validation, security policy, or data cleansing. Validate untrusted data explicitly at the boundary and use hints to improve design and static feedback.
+</Callout>
+
+<SLabel>Production usage</SLabel>
+
+Use `Protocol` when behavior matters more than inheritance, and abstract collection ABCs when you want to be liberal in what you accept.
+
+```python
+# Works on Python 3.8+
+from typing import Protocol
+
+class Closable(Protocol):
+    def close(self) -> None: ...
+
+def close_all(resources: list[Closable]) -> None:
+    for resource in resources:
+        resource.close()
+```
+
+Use concrete return types when the caller needs stable semantics. When annotations should also drive generated record behavior, pair them with `NamedTuple` or dataclasses; see <CardRef id="classes-data-builders" />.
+
+<SLabel>Further depth</SLabel>
+
+- [typing module](https://docs.python.org/3/library/typing.html)
+- [PEP 484: Type Hints](https://peps.python.org/pep-0484/)
+- [PEP 585: Type Hinting Generics In Standard Collections](https://peps.python.org/pep-0585/)
+- [PEP 604: Union Types](https://peps.python.org/pep-0604/)

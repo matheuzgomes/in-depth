@@ -1,0 +1,112 @@
+Python names are bindings to objects, not boxes that contain values. That one fact explains aliasing, mutation leaks, the meaning of `is`, and why `==` can be arbitrarily expensive while `is` is trivial.
+
+<SLabel>Core answer</SLabel>
+
+Use `==` for value equality and `is` for object identity. Identity asks whether two references point to the same object. Equality asks whether two objects compare as equivalent under their type's comparison rules.
+
+```python
+# Works on Python 3.x
+a = [1, 2, 3]
+b = [1, 2, 3]
+alias = a
+
+print(a == b)       # True
+print(a is b)       # False
+print(alias is a)   # True
+```
+
+<SLabel>Mechanism and data model</SLabel>
+
+`is` is a direct identity comparison and cannot be overloaded. `==` dispatches through rich comparison methods such as `__eq__`, which means its cost and semantics depend on the type.
+
+```python
+# Works on Python 3.x
+class UserId:
+    def __init__(self, value):
+        self.value = value
+
+    def __eq__(self, other):
+        if not isinstance(other, UserId):
+            return NotImplemented
+        return self.value == other.value
+
+print(UserId(7) == UserId(7))
+print(UserId(7) is UserId(7))
+```
+
+When `__eq__` returns `NotImplemented`, Python can try the reflected operation on the other operand before deciding the result. That is why equality is semantic and type-dependent, not a fixed machine-level primitive.
+
+The built-in [`id()`](https://docs.python.org/3/library/functions.html#id) returns an integer unique for the object's lifetime. In CPython this is typically the memory address, but that address interpretation is not a language guarantee.
+
+<SLabel>Aliasing and mutation</SLabel>
+
+Assignment copies references, not objects. If two names alias the same mutable object, mutation through either name is visible through both.
+
+```python
+# Works on Python 3.x
+profile = {"name": "Ana", "roles": ["admin"]}
+alias = profile
+
+alias["roles"].append("billing")
+print(profile["roles"])  # ['admin', 'billing']
+```
+
+That is not a bug in Python; it is the object model. The bug is failing to decide whether shared mutation is intended.
+
+<SLabel>Version context</SLabel>
+
+The identity/equality distinction is stable across Python 3. Current project guidance targets Python 3.10-3.14. Python 3.9 and below are End-of-Life.
+
+CPython-specific interning optimizations for some strings and integers may change when identities happen to coincide for equal immutable values. Those are implementation optimizations, not correctness rules.
+
+<SLabel>Edge cases and gotchas</SLabel>
+
+Use `is None`, not `== None`. `None` is a singleton, and equality can be overloaded in surprising ways.
+
+```python
+# Works on Python 3.x
+_missing = object()
+
+def read_config(key, default=_missing):
+    if default is _missing:
+        return f"load {key} from environment"
+    if default is None:
+        return "explicitly disabled"
+    return default
+```
+
+Do not compare strings, numbers, lists, or other ordinary values with `is` just because it sometimes "works" in a REPL. That usually means you accidentally hit an optimization.
+
+<Callout type="warn">
+  If a function receives a mutable object, the contract must say whether it mutates the caller-owned object, snapshots it, or returns a derived copy. Hidden aliasing bugs scale badly in production.
+</Callout>
+
+<SLabel>Production usage</SLabel>
+
+Use identity checks for:
+
+- `None`
+- sentinel objects
+- rare cases where true object identity is part of the contract
+
+Use equality for business values. Copy at boundaries when the callee should not share ownership of a mutable input.
+
+```python
+# Works on Python 3.x
+def normalize_roles(roles):
+    owned = list(roles)
+    owned.sort()
+    return owned
+
+original = ["billing", "admin"]
+print(normalize_roles(original))
+print(original)
+```
+
+For shared-state bugs caused by reused defaults, see <CardRef id="language-mutable-defaults" />.
+
+<SLabel>Further depth</SLabel>
+
+- [Data model: objects, values, and types](https://docs.python.org/3/reference/datamodel.html#objects-values-and-types)
+- [Built-in function: id](https://docs.python.org/3/library/functions.html#id)
+- [Language reference: comparisons](https://docs.python.org/3/reference/expressions.html#comparisons)

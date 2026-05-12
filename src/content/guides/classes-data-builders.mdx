@@ -1,0 +1,149 @@
+Python gives you several ways to build record-like objects, but they do not have the same runtime shape or API implications. The meaningful axes are tuple compatibility, mutability, memory layout, generated behavior, and how much future evolution pressure the type can tolerate.
+
+<SLabel>Core answer</SLabel>
+
+Use `collections.namedtuple` for immutable tuple-compatible records without a heavy class body. Use `typing.NamedTuple` when tuple behavior and annotations both matter. Use `@dataclass` when you want a normal class with generated methods and more control over mutability and validation.
+
+```python
+# Works on Python 3.x
+from collections import namedtuple
+
+City = namedtuple("City", "name country population")
+tokyo = City("Tokyo", "JP", 37_000_000)
+
+print(tokyo.name)
+print(tokyo._asdict())
+```
+
+```python
+# Works on Python 3.x
+from typing import NamedTuple
+
+class TypedCity(NamedTuple):
+    name: str
+    country: str
+    population: int
+```
+
+```python
+# Works on Python 3.7+
+from dataclasses import dataclass
+
+@dataclass
+class MutableCity:
+    name: str
+    country: str
+    population: int
+```
+
+<SLabel>Mechanism and object layout</SLabel>
+
+`namedtuple` and `NamedTuple` instances are tuple subclasses. Their payload is stored in tuple slots, and the field names live on the class, not per instance. That means they preserve tuple semantics:
+
+- indexable
+- iterable
+- immutable by tuple rules
+- hashable if all fields are hashable
+
+Dataclasses create ordinary classes. Without `slots=True`, their instances typically have an instance `__dict__`, which means the object body and the attribute mapping are separate allocations.
+
+Measured locally on CPython 3.12.3, 64-bit Linux:
+
+- `namedtuple` instance with two fields: `56` bytes
+- plain dataclass instance with two fields: `48` bytes for the object itself
+- plain dataclass instance `__dict__`: about `280` bytes
+- slotted dataclass instance with two fields: `48` bytes and no `__dict__`
+
+```python
+# Works on Python 3.10+
+# Example byte counts below were measured on CPython 3.12.3, 64-bit Linux.
+import sys
+from collections import namedtuple
+from dataclasses import dataclass
+
+PointNT = namedtuple("PointNT", "x y")
+
+@dataclass
+class PointDC:
+    x: int
+    y: int
+
+@dataclass(slots=True)
+class PointDCS:
+    x: int
+    y: int
+
+print(sys.getsizeof(PointNT(1, 2)))
+print(sys.getsizeof(PointDC(1, 2)))
+print(sys.getsizeof(PointDC(1, 2).__dict__))
+print(sys.getsizeof(PointDCS(1, 2)))
+```
+
+That means a non-slotted dataclass can be substantially heavier in real memory than a tuple-based record, even if `sys.getsizeof(instance)` alone looks small.
+
+<SLabel>Generated behavior</SLabel>
+
+All three tools generate useful representation and equality behavior, but they generate different contracts:
+
+- tuple-based builders preserve positional unpacking and tuple ordering semantics
+- dataclasses preserve attribute-centric class semantics
+
+```python
+# Works on Python 3.7+
+from dataclasses import dataclass
+
+@dataclass(frozen=True)
+class Point:
+    x: int
+    y: int
+
+print(Point(1, 2) == Point(1, 2))
+```
+
+Annotations still do not validate runtime values by themselves. They inform type checkers and, for dataclasses, field discovery.
+
+<SLabel>Version context</SLabel>
+
+`collections.namedtuple` is long-standing standard library. `typing.NamedTuple` is modern Python 3 typing support. Dataclasses arrived in Python 3.7 via [PEP 557](https://peps.python.org/pep-0557/). Current project guidance targets Python 3.10-3.14. Python 3.9 and below are End-of-Life.
+
+<SLabel>Edge cases and gotchas</SLabel>
+
+Tuple compatibility is a strong API promise. If callers unpack or index your `NamedTuple`, field reordering becomes a breaking change. Dataclasses are easier to evolve when callers use attribute names.
+
+`namedtuple` and `NamedTuple` also encourage positional semantics. That is efficient, but it can become opaque for wide records.
+
+<Callout type="warn">
+  A field-only dataclass can still be a bad design if the invariants live elsewhere. Generated methods remove boilerplate; they do not remove the need for domain behavior and validation.
+</Callout>
+
+<SLabel>Production usage</SLabel>
+
+Use this decision rule:
+
+- tuple compatibility required: `namedtuple` or `NamedTuple`
+- typed immutable record: `NamedTuple` or `@dataclass(frozen=True)`
+- many small instances with attribute access: consider `@dataclass(slots=True)` after measuring
+- mutable domain object with validation hooks: `@dataclass`
+
+```python
+# Works on Python 3.7+
+from dataclasses import dataclass
+
+@dataclass
+class Email:
+    value: str
+
+    def __post_init__(self):
+        if "@" not in self.value:
+            raise ValueError("invalid email")
+```
+
+For field-level control, see <CardRef id="classes-dataclass-fields" />. For annotation semantics, see <CardRef id="language-type-hints" />.
+
+<SLabel>Further depth</SLabel>
+
+- [collections.namedtuple](https://docs.python.org/3/library/collections.html#collections.namedtuple)
+- [typing.NamedTuple](https://docs.python.org/3/library/typing.html#typing.NamedTuple)
+- [dataclasses module](https://docs.python.org/3/library/dataclasses.html)
+- [PEP 557: Data Classes](https://peps.python.org/pep-0557/)
+- [sys.getsizeof](https://docs.python.org/3/library/sys.html#sys.getsizeof)

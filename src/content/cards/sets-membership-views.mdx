@@ -1,0 +1,20 @@
+Sets are hash tables for membership. Dictionary key views can participate in set operations without first materializing a separate set.
+
+```python
+# Works on Python 3.x
+required_keys = {"id", "email"}
+allowed_keys = {"id", "email", "debug"}
+payload = {"id": 1, "debug": True}
+
+missing = required_keys - payload.keys()
+unexpected = payload.keys() - allowed_keys
+
+if missing:
+    raise ValueError(missing)
+```
+
+<Callout type="info">
+  <code>dict_keys</code> is set-like because keys are hashable. <code>dict_items</code> is set-like only when every value is hashable too.
+</Callout>
+
+<GuideLink id="sets-membership-views" />

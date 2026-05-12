@@ -1,0 +1,188 @@
+import { asyncFoundationsTimelineData } from "@/data/simulations"
+
+This guide covers the chapter-21 foundation layer: definitions, awaitables, native coroutines, Guido's reading trick, the generator lineage under `await`, and the all-or-nothing constraint of asynchronous design.
+
+<SLabel>Core answer</SLabel>
+
+The async keywords give Python a native way to express **cooperative suspension**.
+
+- `async def` defines a native coroutine function
+- calling it creates a coroutine object
+- `await` suspends that coroutine until another awaitable produces a result
+
+The right mental model is not "async makes things parallel." The right mental model is:
+
+- your coroutine runs
+- it reaches `await`
+- it suspends
+- the event loop can run something else
+
+```python
+# Works on Python 3.7+
+import asyncio
+
+async def fetch_flag():
+    await asyncio.sleep(0.1)
+    return "BR"
+
+print(asyncio.run(fetch_flag()))
+```
+
+<AsyncTimelineLab data={asyncFoundationsTimelineData} />
+
+<SLabel>A few definitions</SLabel>
+
+Coroutine function:
+
+- declared with `async def`
+
+Coroutine object:
+
+- created when a coroutine function is called
+
+Awaitable:
+
+- an object that can appear to the right of `await`
+
+Event loop:
+
+- the scheduler that drives tasks and other awaitables forward when they become ready
+
+The official docs use "awaitable" as the umbrella term because not everything awaited is the same kind of object. Coroutines, tasks, and futures all fit under that umbrella.
+
+<SLabel>Guido's trick for reading async code</SLabel>
+
+One of the easiest ways to read async code is to ignore the scheduling details first and read it almost as if it were synchronous, then come back and mark every `await` as a potential suspension boundary.
+
+```python
+# Works on Python 3.7+
+async def load_user_page(client, user_id):
+    profile = await fetch_profile(client, user_id)
+    orders = await fetch_orders(client, user_id)
+    return profile, orders
+```
+
+First reading:
+
+- load profile
+- load orders
+- return both
+
+Second reading:
+
+- the coroutine may suspend at `await fetch_profile(...)`
+- then suspend again at `await fetch_orders(...)`
+
+That second pass is where latency, concurrency, and failure behavior become visible.
+
+<SLabel>New concept: awaitable</SLabel>
+
+The language reference defines `await` in terms of the awaitable protocol. In practice, the main awaitables you touch in application code are:
+
+- coroutine objects
+- `asyncio.Task`
+- `asyncio.Future`
+
+```python
+# Works on Python 3.7+
+import asyncio
+
+async def child():
+    await asyncio.sleep(0.1)
+    return "ok"
+
+async def main():
+    coro = child()
+    task = asyncio.create_task(child())
+    return await coro, await task
+
+print(asyncio.run(main()))
+```
+
+The important design fact is that `await` is about protocol, not spelling. If an object supports the awaitable protocol, Python can suspend on it.
+
+<SLabel>The secret of native coroutines</SLabel>
+
+Native coroutines look like a completely new feature, but the mechanism did not appear from nowhere. `await` inherits much of its coroutine-driving behavior from generator machinery.
+
+That does **not** mean you should think of modern async code as "just generators." It means:
+
+- the implementation lineage matters
+- suspension/resumption is the essential idea
+- the event loop is what drives that process in asyncio programs
+
+The official language-level contract is the async/await behavior itself. The exact internal steps, bytecode, and event-loop plumbing are interpreter and library implementation detail.
+
+<SLabel>The all-or-nothing problem</SLabel>
+
+Fluent Python emphasizes a real production constraint: asynchronous design is not a small cosmetic switch. If one critical layer blocks, the benefit collapses.
+
+```python
+# Works on Python 3.x
+import asyncio
+import time
+
+async def bad_worker():
+    time.sleep(0.5)
+    return "done"
+```
+
+That coroutine is syntactically async, but it is operationally blocking. It does not cooperate with the event loop while `time.sleep` is running.
+
+This is why async systems need boundary discipline:
+
+- async-compatible network/database clients
+- explicit delegation for blocking calls
+- careful CPU-bound escape hatches
+
+See <CardRef id="async-context-backpressure" /> and <CardRef id="async-limits-type-hints" />.
+
+<SLabel>Version context</SLabel>
+
+Current project guidance targets Python 3.10-3.14. Python 3.9 and below are End-of-Life.
+
+Important version markers:
+
+- `async` / `await` syntax: Python 3.5+ [PEP 492]
+- `asyncio.run`: Python 3.7+
+
+Because this project targets current Python, native coroutine syntax is the baseline. Generator-based coroutine style is historical context, not a recommended production style.
+
+<SLabel>Edge cases and gotchas</SLabel>
+
+Calling an `async def` function does **not** run it immediately. It creates a coroutine object.
+
+```python
+# Works on Python 3.7+
+async def hello():
+    return "hi"
+
+result = hello()
+print(result)
+```
+
+Another common mistake is treating `await` as if it always means "run in parallel." It does not. It means "suspend here until this awaitable completes."
+
+<Callout type="warn">
+  A coroutine that does CPU work or blocking I/O without awaiting is worse than synchronous code hidden behind async syntax, because readers expect event-loop cooperation that never happens.
+</Callout>
+
+<SLabel>Production usage</SLabel>
+
+Use this foundation model when reading or designing async code:
+
+1. mark every `await`
+2. ask what object is being awaited
+3. ask whether that object eventually reaches non-blocking external readiness
+4. ask what happens if it fails, stalls, or never yields
+
+For production lifecycle, cancellation, and bounded fan-out, see <CardRef id="asyncio-task-groups" />.
+
+<SLabel>Further depth</SLabel>
+
+- [Language reference: await expression](https://docs.python.org/3/reference/expressions.html#await)
+- [Language reference: coroutine function definition](https://docs.python.org/3/reference/compound_stmts.html#coroutine-function-definition)
+- [asyncio](https://docs.python.org/3/library/asyncio.html)
+- [Coroutines and Tasks](https://docs.python.org/3/library/asyncio-task.html)
+- [PEP 492: Coroutines with async and await syntax](https://peps.python.org/pep-0492/)
+- [Fluent Python, 2nd Edition, Chapter 21](https://www.oreilly.com/library/view/fluent-python-2nd/9781492056348/ch21.html)

@@ -1,0 +1,18 @@
+Python variables are names bound to objects. `==` asks whether values are equal; `is` asks whether two names point to the exact same object.
+
+```python
+# Works on Python 3.x
+a = [1, 2]
+b = a
+c = [1, 2]
+
+print(a == c)  # True
+print(a is c)  # False
+print(a is b)  # True
+```
+
+<Callout type="tip">
+  Use <code>is None</code> for sentinels and singletons. Use <code>==</code> for strings, numbers, lists, and business values.
+</Callout>
+
+<GuideLink id="language-identity-equality" />

@@ -1,0 +1,185 @@
+import { asyncBackpressureTimelineData } from "@/data/simulations"
+
+This guide covers the chapter-21 operational middle: asynchronous context managers, completion-order processing, semaphores, multiple in-flight requests, and delegating blocking boundaries to executors or helper threads.
+
+<SLabel>Core answer</SLabel>
+
+Good async code needs more than `await`. It needs:
+
+- safe acquisition/release boundaries
+- bounded fan-out
+- deliberate completion-order handling
+- explicit offloading for blocking work
+
+Without those, "concurrent" code can still overload upstream systems or freeze the loop.
+
+```python
+# Works on Python 3.7+
+import asyncio
+
+async def fetch_one(name, sem):
+    async with sem:
+        await asyncio.sleep(0.1)
+        return name
+```
+
+<AsyncTimelineLab data={asyncBackpressureTimelineData} />
+
+<SLabel>Asynchronous context managers</SLabel>
+
+An asynchronous context manager is the async variant of the `with` protocol. It uses:
+
+- `__aenter__`
+- `__aexit__`
+
+and is entered with `async with`.
+
+```python
+# Works on Python 3.7+
+class Demo:
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc, tb):
+        return False
+```
+
+This matters in async resource code because entry or cleanup may itself need to await:
+
+- open or warm a network connection
+- flush buffered output
+- close gracefully
+
+That is why async client libraries often use `async with` for sessions, streams, and connection lifetimes.
+
+<SLabel>Completion order vs input order</SLabel>
+
+`asyncio.as_completed` solves a different problem than `gather`.
+
+- `gather` returns results aligned with input order
+- `as_completed` lets you react in completion order
+
+```python
+# Works on Python 3.10+
+import asyncio
+
+async def job(delay):
+    await asyncio.sleep(delay)
+    return delay
+
+async def main():
+    tasks = [job(0.3), job(0.1), job(0.2)]
+    for finished in asyncio.as_completed(tasks):
+        print(await finished)
+
+asyncio.run(main())
+```
+
+Use completion order when:
+
+- early results are useful immediately
+- you want progress reporting
+- slow tail tasks should not delay consumption of fast ones
+
+<SLabel>Throttling with semaphores</SLabel>
+
+A semaphore is one of the clearest backpressure tools in `asyncio`. It caps how many coroutines can enter a protected section concurrently.
+
+```python
+# Works on Python 3.7+
+import asyncio
+
+async def fetch_all(names, limit=2):
+    sem = asyncio.Semaphore(limit)
+
+    async def one(name):
+        async with sem:
+            await asyncio.sleep(0.1)
+            return name
+
+    return await asyncio.gather(*(one(name) for name in names))
+```
+
+The semaphore does not make individual requests faster. It prevents unbounded concurrency from turning into:
+
+- connection pool exhaustion
+- upstream rate-limit violations
+- file descriptor pressure
+- latency collapse from too many in-flight tasks
+
+This connects directly to the production guidance in <CardRef id="asyncio-task-groups" />.
+
+<SLabel>Making multiple requests per unit of work</SLabel>
+
+One of the chapter's real lessons is architectural: as soon as one logical job requires several awaited operations, you need to decide:
+
+- do these requests run sequentially?
+- do they run concurrently?
+- do they belong to one failure boundary?
+
+If they are one parent operation, the structured-concurrency answer in current Python is `TaskGroup`. That existing guide already covers the lifecycle/failure side, so this guide keeps the focus on throughput and flow shape instead of duplicating it. See <CardRef id="asyncio-task-groups" />.
+
+<SLabel>Delegating blocking work</SLabel>
+
+If part of the workload is synchronous and blocking, you must move it off the event-loop thread.
+
+```python
+# Works on Python 3.9+
+import asyncio
+from pathlib import Path
+
+async def load_text(path):
+    return await asyncio.to_thread(Path(path).read_text, encoding="utf-8")
+```
+
+`asyncio.to_thread` is a practical boundary tool for:
+
+- blocking file I/O
+- legacy synchronous clients
+- other operations that would otherwise freeze the loop
+
+It does **not** make CPU-heavy Python bytecode parallel in the general case. It mainly protects loop responsiveness while the blocking function runs elsewhere.
+
+<SLabel>Version context</SLabel>
+
+Current project guidance targets Python 3.10-3.14. Python 3.9 and below are End-of-Life.
+
+Version-sensitive points:
+
+- `asyncio.as_completed`: long-standing asyncio API
+- `asyncio.Semaphore`: long-standing asyncio API
+- `asyncio.to_thread`: Python 3.9+
+- `TaskGroup`: Python 3.11+
+
+This guide intentionally cross-links `TaskGroup` instead of re-explaining its failure semantics in full.
+
+<SLabel>Edge cases and gotchas</SLabel>
+
+Semaphores limit concurrency **inside** the protected block only. They do not automatically limit task creation outside it.
+
+`as_completed` changes result consumption order. That is powerful, but it also means downstream code must tolerate out-of-order completion.
+
+`to_thread` can protect the loop from blocking I/O, but it is not a universal substitute for process-based CPU parallelism.
+
+<Callout type="warn">
+  Async without backpressure is usually a production bug. If your design can create unbounded in-flight work, it will eventually do so under real traffic.
+</Callout>
+
+<SLabel>Production usage</SLabel>
+
+Use:
+
+- `async with` for resource ownership with awaited setup/teardown
+- `as_completed` when earliest-finished work should be consumed first
+- semaphores to cap concurrency
+- `to_thread` or executors only at explicit blocking boundaries
+
+For server-side consequences of the same event-loop rules, see <CardRef id="async-servers-services" />.
+
+<SLabel>Further depth</SLabel>
+
+- [asyncio: synchronization primitives](https://docs.python.org/3/library/asyncio-sync.html)
+- [Coroutines and Tasks](https://docs.python.org/3/library/asyncio-task.html)
+- [asyncio.to_thread](https://docs.python.org/3/library/asyncio-task.html#asyncio.to_thread)
+- [Language reference: async with statement](https://docs.python.org/3/reference/compound_stmts.html#the-async-with-statement)
+- [Fluent Python, 2nd Edition, Chapter 21](https://www.oreilly.com/library/view/fluent-python-2nd/9781492056348/ch21.html)

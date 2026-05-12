@@ -1,0 +1,142 @@
+import { dictLookupSimulation } from "@/data/simulations"
+
+Dictionaries are Python's general-purpose hash table. They trade memory for fast keyed access, and they also underpin object namespaces, module globals, and many instance attribute dictionaries.
+
+<SLabel>Core answer</SLabel>
+
+A dict key must be hashable: its hash must be consistent with equality, and whatever data determines that hash must not change while the object is used as a key.
+
+```python
+# Works on Python 3.x
+good = {
+    ("region", "BR"): "active",
+    42: "answer",
+    frozenset({"read", "write"}): "role",
+}
+
+try:
+    bad = {["region", "BR"]: "active"}
+except TypeError as exc:
+    print(exc)
+```
+
+Average-case lookup is effectively constant time because Python computes the hash and probes the hash table directly. It is not a promise that every lookup costs the same or that memory overhead is small.
+
+<DictLookupSimulation data={dictLookupSimulation} />
+
+<SLabel>Mechanism and internals</SLabel>
+
+The portable rule is:
+
+- if `a == b`, then `hash(a) == hash(b)` must also hold
+
+The CPython implementation uses an open-addressed hash table with probing for collisions. Exact collision resolution details are implementation-specific and have changed across releases, but the performance model remains the same: good hashes spread keys, bad hashes create more probes.
+
+```python
+# Works on Python 3.x
+class BadKey:
+    def __init__(self, value):
+        self.value = value
+
+    def __hash__(self):
+        return 1
+
+    def __eq__(self, other):
+        return isinstance(other, BadKey) and self.value == other.value
+
+data = {BadKey(i): i for i in range(5)}
+print(len(data))
+```
+
+That dictionary still works correctly, but it is a hostile workload for the table because many keys compete for the same initial slot.
+
+<SLabel>Memory cost and growth</SLabel>
+
+Dicts reserve significantly more memory than a plain sequence because the table must preserve fast lookups under growth. Local CPython 3.12.3, 64-bit measurements with `sys.getsizeof` show the growth steps clearly:
+
+- `dict()` -> `64` bytes
+- `1` to `5` items -> `224` bytes
+- `6` to `10` items -> `352` bytes
+- `16` items -> `632` bytes
+- `32` items -> `1168` bytes
+
+```python
+# Works on Python 3.x
+# Example byte counts below were measured on CPython 3.12.3, 64-bit Linux.
+import sys
+
+for n in (0, 1, 5, 6, 10, 16, 32):
+    d = {i: i for i in range(n)}
+    print(n, sys.getsizeof(d))
+```
+
+Those jumps exist because CPython maintains spare capacity to keep probe counts low and resizes before the table becomes too crowded. The exact thresholds are implementation detail, not a language guarantee, but the tradeoff is stable: dicts spend memory to protect lookup speed.
+
+<SLabel>Ordering and object dictionaries</SLabel>
+
+Dictionary insertion order is guaranteed by the language in Python 3.7+. CPython 3.6 preserved it as an implementation detail, but Python 3.6 is End-of-Life and should not be treated as a production baseline.
+
+```python
+# Works on Python 3.7+
+config = {}
+config["host"] = "localhost"
+config["port"] = 5432
+config["debug"] = False
+
+print(list(config))
+```
+
+Dict internals also matter for objects. CPython uses key-sharing dictionaries for many instance `__dict__` layouts when instances of a class have the same attribute names. Defining attributes consistently in `__init__` helps preserve that memory optimization.
+
+```python
+# Works on Python 3.x
+class Person:
+    def __init__(self, name, age):
+        self.name = name
+        self.age = age
+```
+
+The optimization details are CPython-specific. The production lesson is stable: define instance attributes predictably instead of attaching random new fields later unless that flexibility is intentional.
+
+<SLabel>Version context</SLabel>
+
+Current project guidance targets Python 3.10-3.14. Insertion order is language-guaranteed in Python 3.7+. Python 3.9 and below are End-of-Life.
+
+The exact byte counts in this guide are CPython 3.12.3, 64-bit measurements taken locally. Different interpreters and builds may differ.
+
+<SLabel>Edge cases and gotchas</SLabel>
+
+Never mutate an object's equality-relevant fields after inserting it into a dict. The object may become unfindable because the table placement was based on the old hash/equality state.
+
+```python
+# Works on Python 3.x
+from dataclasses import dataclass
+
+@dataclass(unsafe_hash=True)
+class Point:
+    x: int
+    y: int
+
+p = Point(1, 2)
+points = {p: "origin-ish"}
+p.x = 99
+print(points.get(p))
+```
+
+<Callout type="warn">
+  Use immutable key objects. If the domain object is mutable, key by a stable identifier instead of the mutable object itself.
+</Callout>
+
+<SLabel>Production usage</SLabel>
+
+Use dicts when keyed lookup is the real operation. Do not use them as a vague replacement for every record or every small container. For membership-only workloads, a `set` usually expresses intent better and can be cheaper because there are no stored values; see <CardRef id="sets-membership-views" />.
+
+Use `defaultdict` or `setdefault` only when the "bucket per key" pattern is genuine; see <CardRef id="dict-setdefault" />.
+
+<SLabel>Further depth</SLabel>
+
+- [Mapping types - dict](https://docs.python.org/3/library/stdtypes.html#mapping-types-dict)
+- [Data model: object.__hash__](https://docs.python.org/3/reference/datamodel.html#object.__hash__)
+- [What's New in Python 3.7](https://docs.python.org/3/whatsnew/3.7.html)
+- [PEP 412: Key-Sharing Dictionary](https://peps.python.org/pep-0412/)
+- [sys.getsizeof](https://docs.python.org/3/library/sys.html#sys.getsizeof)
