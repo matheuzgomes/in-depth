@@ -14,7 +14,7 @@ Good async code needs more than `await`. It needs:
 Without those, "concurrent" code can still overload upstream systems or freeze the loop.
 
 ```python
-# Works on Python 3.7+
+# [OLDER / 3.7-3.8, CURRENT - 3.10-3.14] Works on Python 3.7+
 import asyncio
 
 async def fetch_one(name, sem):
@@ -35,7 +35,7 @@ An asynchronous context manager is the async variant of the `with` protocol. It 
 and is entered with `async with`.
 
 ```python
-# Works on Python 3.7+
+# [OLDER / 3.7-3.8, CURRENT - 3.10-3.14] Works on Python 3.7+
 class Demo:
     async def __aenter__(self):
         return self
@@ -60,7 +60,7 @@ That is why async client libraries often use `async with` for sessions, streams,
 - `as_completed` lets you react in completion order
 
 ```python
-# Works on Python 3.10+
+# [CURRENT - 3.10-3.14] Works on Python 3.10+
 import asyncio
 
 async def job(delay):
@@ -86,7 +86,7 @@ Use completion order when:
 A semaphore is one of the clearest backpressure tools in `asyncio`. It caps how many coroutines can enter a protected section concurrently.
 
 ```python
-# Works on Python 3.7+
+# [OLDER / 3.7-3.8, CURRENT - 3.10-3.14] Works on Python 3.7+
 import asyncio
 
 async def fetch_all(names, limit=2):
@@ -124,7 +124,7 @@ If they are one parent operation, the structured-concurrency answer in current P
 If part of the workload is synchronous and blocking, you must move it off the event-loop thread.
 
 ```python
-# Works on Python 3.9+
+# [OLDER / 3.9, CURRENT - 3.10-3.14] Works on Python 3.9+
 import asyncio
 from pathlib import Path
 

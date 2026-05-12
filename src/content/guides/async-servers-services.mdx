@@ -14,7 +14,7 @@ An async server is fundamentally an event loop that:
 The value is not just "many clients at once." The value is "many clients without one blocked client freezing the whole process."
 
 ```python
-# Works on Python 3.7+
+# [OLDER / 3.7-3.8, CURRENT - 3.10-3.14] Works on Python 3.7+
 async def handle(reader, writer):
     line = await reader.readline()
     writer.write(line.upper())
@@ -34,7 +34,7 @@ The core asyncio server pattern is:
 - let that coroutine await network events rather than blocking synchronously
 
 ```python
-# Works on Python 3.7+
+# [OLDER / 3.7-3.8, CURRENT - 3.10-3.14] Works on Python 3.7+
 import asyncio
 
 async def handle(reader, writer):

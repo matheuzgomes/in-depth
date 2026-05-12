@@ -24,25 +24,25 @@ export function SimulationShell({
 }) {
   return (
     <div style={{
-      margin: "16px 0 18px",
-      borderRadius: 22,
+      margin: "18px 0 22px",
+      borderRadius: 24,
       border: `1px solid ${T.borderHi}`,
       background: `linear-gradient(180deg, ${T.articleAlt}, ${T.article})`,
-      boxShadow: `0 18px 42px rgba(2, 6, 16, 0.28), inset 0 1px 0 rgba(255,255,255,0.03)`,
+      boxShadow: `0 20px 48px rgba(2, 6, 16, 0.28), inset 0 1px 0 rgba(255,255,255,0.03)`,
       overflow: "hidden",
     }}>
       {!open ? (
-        <div style={{ padding: "16px 18px" }}>
-          <div style={{ fontSize: 14, fontWeight: 650, color: T.text1, marginBottom: 6 }}>
+        <div style={{ padding: "18px 20px" }}>
+          <div style={{ fontSize: 15, fontWeight: 700, color: T.text1, marginBottom: 8 }}>
             {title}
           </div>
-          <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.75, color: T.text2 }}>
+          <p style={{ margin: 0, fontSize: 13, lineHeight: 1.75, color: T.text2, maxWidth: 58 * 8 }}>
             {summary}
           </p>
           <button
             onClick={onOpen}
             style={{
-              marginTop: 14,
+              marginTop: 16,
               display: "inline-flex",
               alignItems: "center",
               gap: 8,
@@ -69,16 +69,16 @@ export function SimulationShell({
             gap: 12,
             padding: "14px 18px",
             borderBottom: `1px solid ${T.border}`,
-            background: `linear-gradient(180deg, ${T.bg2}, ${T.articleAlt})`,
+              background: `linear-gradient(180deg, ${T.bg2}, ${T.articleAlt})`,
           }}>
-            <div>
-              <div style={{ fontSize: 14, fontWeight: 650, color: T.text1 }}>{title}</div>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: T.text1 }}>{title}</div>
               {stepLabel ? (
-                <div style={{ fontSize: 11.5, color: T.text3, marginTop: 3 }}>{stepLabel}</div>
+                <div style={{ fontSize: 11.5, color: T.text3, marginTop: 4, lineHeight: 1.45 }}>{stepLabel}</div>
               ) : null}
             </div>
           </div>
-          <div style={{ padding: "18px" }}>{children}</div>
+          <div style={{ padding: "18px", display: "grid", gap: 16 }}>{children}</div>
         </>
       )}
     </div>
@@ -133,11 +133,10 @@ export function SimulationCodePanel({
 
   return (
     <div style={{
-      borderRadius: 12,
+      borderRadius: 16,
       border: `1px solid ${T.border}`,
       background: `linear-gradient(180deg, ${T.code}, ${T.bg0})`,
       padding: "14px 16px",
-      marginBottom: 16,
       fontFamily: "var(--font-mono)",
       fontSize: 12.5,
       lineHeight: 1.75,
@@ -184,16 +183,17 @@ export function StateCard({
 }) {
   return (
     <div style={{
-      borderRadius: 12,
+      borderRadius: 16,
       border: `1px solid ${color.accent}44`,
       background: `linear-gradient(180deg, ${color.bg}, rgba(255,255,255,0.02))`,
       padding: "12px 13px",
       minHeight,
+      minWidth: 0,
     }}>
       <div style={{ fontSize: 10.5, letterSpacing: "0.08em", textTransform: "uppercase", color: color.fg, marginBottom: 8, fontWeight: 800 }}>
         {label}
       </div>
-      <div style={{ fontSize: 13.5, color: T.text1, lineHeight: 1.5, fontFamily: "var(--font-mono)" }}>
+      <div style={{ fontSize: 13.5, color: T.text1, lineHeight: 1.55, fontFamily: "var(--font-mono)", whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
         {value}
       </div>
     </div>
@@ -213,7 +213,7 @@ export function ExplanationPanel({
 }) {
   return (
     <div style={{
-      borderRadius: 12,
+      borderRadius: 16,
       border: `1px solid ${T.border}`,
       background: done ? "rgba(106, 171, 238, 0.12)" : `linear-gradient(180deg, ${T.bg2}, ${T.articleAlt})`,
       padding: "13px 14px",
@@ -226,6 +226,147 @@ export function ExplanationPanel({
       </div>
       {footer}
     </div>
+  )
+}
+
+export function SimulationGrid({
+  children,
+  minColumn = 180,
+}: {
+  children: ReactNode
+  minColumn?: number
+}) {
+  return (
+    <div style={{
+      display: "grid",
+      gap: 12,
+      gridTemplateColumns: `repeat(auto-fit, minmax(min(${minColumn}px, 100%), 1fr))`,
+    }}>
+      {children}
+    </div>
+  )
+}
+
+export function SimulationSection({
+  title,
+  children,
+  tone = "neutral",
+}: {
+  title: string
+  children: ReactNode
+  tone?: "neutral" | "teal" | "amber" | "blue"
+}) {
+  const toneMap = {
+    neutral: { bg: T.bg2, border: T.border, title: T.text1 },
+    teal: { bg: "rgba(94, 201, 161, 0.08)", border: `${T.teal.accent}33`, title: T.teal.fg },
+    amber: { bg: "rgba(240, 176, 96, 0.08)", border: `${T.amber.accent}33`, title: T.amber.fg },
+    blue: { bg: "rgba(132, 160, 220, 0.08)", border: `${T.blue.accent}33`, title: T.blue.fg },
+  } as const
+  const current = toneMap[tone]
+
+  return (
+    <section style={{
+      borderRadius: 16,
+      border: `1px solid ${current.border}`,
+      background: current.bg,
+      padding: "14px 14px 16px",
+      display: "grid",
+      gap: 12,
+      minWidth: 0,
+    }}>
+      <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: current.title }}>
+        {title}
+      </div>
+      {children}
+    </section>
+  )
+}
+
+export function SimulationPillRow({ children }: { children: ReactNode }) {
+  return <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>{children}</div>
+}
+
+export function SimulationPillButton({
+  selected,
+  color = T.teal,
+  onClick,
+  children,
+}: {
+  selected: boolean
+  color?: { bg: string; fg: string; accent: string }
+  onClick: () => void
+  children: ReactNode
+}) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        borderRadius: 999,
+        border: `1px solid ${selected ? `${color.accent}77` : T.border}`,
+        background: selected ? color.bg : T.bg2,
+        color: selected ? color.fg : T.text2,
+        padding: "7px 11px",
+        fontSize: 11.5,
+        fontWeight: 650,
+        cursor: "pointer",
+      }}
+    >
+      {children}
+    </button>
+  )
+}
+
+export function SimulationSelectableCard({
+  title,
+  body,
+  footer,
+  selected,
+  onClick,
+  color = T.teal,
+  eyebrow,
+}: {
+  title: string
+  body: ReactNode
+  footer?: ReactNode
+  selected: boolean
+  onClick: () => void
+  color?: { bg: string; fg: string; accent: string }
+  eyebrow?: ReactNode
+}) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        textAlign: "left",
+        borderRadius: 16,
+        border: `1px solid ${selected ? `${color.accent}88` : T.border}`,
+        background: selected ? color.bg : T.bg2,
+        padding: "14px",
+        cursor: "pointer",
+        display: "grid",
+        gap: 8,
+        minWidth: 0,
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8 }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: selected ? color.fg : T.text1 }}>
+          {title}
+        </div>
+        {eyebrow ? (
+          <div style={{ fontSize: 10.5, color: T.text3, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+            {eyebrow}
+          </div>
+        ) : null}
+      </div>
+      <div style={{ fontSize: 12.5, color: T.text2, lineHeight: 1.65, overflowWrap: "anywhere" }}>
+        {body}
+      </div>
+      {footer ? (
+        <div style={{ fontSize: 11.5, color: selected ? color.fg : T.text3, lineHeight: 1.65, overflowWrap: "anywhere" }}>
+          {footer}
+        </div>
+      ) : null}
+    </button>
   )
 }
 

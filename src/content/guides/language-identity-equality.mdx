@@ -5,7 +5,7 @@ Python names are bindings to objects, not boxes that contain values. That one fa
 Use `==` for value equality and `is` for object identity. Identity asks whether two references point to the same object. Equality asks whether two objects compare as equivalent under their type's comparison rules.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 a = [1, 2, 3]
 b = [1, 2, 3]
 alias = a
@@ -20,7 +20,7 @@ print(alias is a)   # True
 `is` is a direct identity comparison and cannot be overloaded. `==` dispatches through rich comparison methods such as `__eq__`, which means its cost and semantics depend on the type.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 class UserId:
     def __init__(self, value):
         self.value = value
@@ -43,7 +43,7 @@ The built-in [`id()`](https://docs.python.org/3/library/functions.html#id) retur
 Assignment copies references, not objects. If two names alias the same mutable object, mutation through either name is visible through both.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 profile = {"name": "Ana", "roles": ["admin"]}
 alias = profile
 
@@ -64,7 +64,7 @@ CPython-specific interning optimizations for some strings and integers may chang
 Use `is None`, not `== None`. `None` is a singleton, and equality can be overloaded in surprising ways.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 _missing = object()
 
 def read_config(key, default=_missing):
@@ -92,7 +92,7 @@ Use identity checks for:
 Use equality for business values. Copy at boundaries when the callee should not share ownership of a mutable input.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 def normalize_roles(roles):
     owned = list(roles)
     owned.sort()

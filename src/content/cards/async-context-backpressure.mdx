@@ -1,7 +1,7 @@
 Real async production work is not just `await`. You also need backpressure and offloading patterns such as semaphores, `as_completed`, and thread delegation for blocking boundaries.
 
 ```python
-# Works on Python 3.7+
+# [OLDER / 3.7-3.8, CURRENT - 3.10-3.14] Works on Python 3.7+
 import asyncio
 
 async def fetch_one(name, sem):

@@ -7,7 +7,7 @@ Use a tuple when the size and ordering are part of the meaning of the value. Use
 Both containers store references, not inline Python values. The distinction is not "tuple stores data directly, list stores pointers." Both store pointers to Python objects. The difference is that a tuple stores exactly `n` reference slots inside the tuple object, while a list stores a pointer to a separately managed resizable reference array.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 city = ("Sao Paulo", "BR", 12_000_000)
 pipeline = ["parse", "validate"]
 pipeline.append("store")
@@ -19,7 +19,7 @@ print(pipeline)
 Tuple immutability is shallow: the tuple shape cannot change, but mutable objects inside it can still be mutated through the stored references.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 record = ("batch-1", [])
 record[1].append("row-1")
 print(record)
@@ -46,7 +46,7 @@ That yields a simple CPython 3.12 rule of thumb for container-only cost:
 So for the same number of elements, the list container itself is typically about `16` bytes larger than the tuple container on this build.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 # Example byte counts below were measured on CPython 3.12.3, 64-bit Linux.
 import sys
 
@@ -67,7 +67,7 @@ for n in (0, 1, 2, 3, 10, 16):
 - 10 separate `float` objects, each with its own object header and payload
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 # Example byte counts below were measured on CPython 3.12.3, 64-bit Linux.
 import sys
 
@@ -86,7 +86,7 @@ The `16`-byte gap remains because the element objects are identical in both case
 The main reason lists cost more is not just the larger base header. It is the resizing strategy. CPython over-allocates list capacity so repeated `append()` is amortized `O(1)` instead of reallocating on every push. Tuples do not need that mechanism because they never grow.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 # Example byte counts below were measured on CPython 3.12.3, 64-bit Linux.
 import sys
 
@@ -120,7 +120,7 @@ There is also a locality effect. A tuple's reference slots live contiguously wit
 Tuples also have advantages when the value is known at compile time. In current CPython, a tuple literal of constants can be emitted as one constant object, while a list literal must still build a new mutable list at runtime.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 import dis
 
 def states_tuple():
@@ -138,7 +138,7 @@ On CPython 3.12, the tuple version uses `RETURN_CONST`, while the list version s
 Copying shows the semantic difference directly:
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 t = (1, 2, 3)
 l = [1, 2, 3]
 
@@ -163,7 +163,7 @@ Do not use tuple as a vague synonym for "faster list." The memory savings are re
 </Callout>
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 print(hash(("region", "BR")))
 
 try:
@@ -175,7 +175,7 @@ except TypeError as exc:
 If the workload is numeric and dense, neither list nor tuple is the real memory-efficient choice. A flat container such as `array.array` avoids one Python object header per element and can reduce memory dramatically.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 # Example byte counts below were measured on CPython 3.12.3, 64-bit Linux.
 import sys
 from array import array

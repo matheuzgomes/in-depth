@@ -1,7 +1,7 @@
 Container sequences store references to Python objects. Flat sequences store raw values, which can be much tighter and friendlier to I/O.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 view = memoryview(bytearray(b"abcdef"))
 view[2:4] = b"XY"  # zero-copy slice assignment
 print(bytes(view))

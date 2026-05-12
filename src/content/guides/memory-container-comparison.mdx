@@ -20,7 +20,7 @@ If you pick only by surface syntax, you will miss the real costs:
 That difference determines memory footprint, mutation shape, and the operations that stay cheap at scale.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 from array import array
 
 ordered = [10, 20, 30]
@@ -102,7 +102,7 @@ Everything else is a tradeoff between ordered mutation, fixed shape, and API exp
 `array.array` is different from all three. It stores raw C values packed side by side under a chosen typecode such as `"I"` or `"d"`. That is why it can be dramatically smaller for dense numeric workloads.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 from array import array
 
 floats = [1.0, 2.0, 3.0]
@@ -146,7 +146,7 @@ Three things matter here:
 3. `array.array` is unusually compact because the payload is stored inline rather than as separate Python objects.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 # Example byte counts below were measured on CPython 3.12.3, 64-bit Linux.
 import sys
 from array import array
@@ -178,7 +178,7 @@ Now compare dense numeric storage instead of container-only size. For `list` and
 </table>
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 # Example byte counts below were measured on CPython 3.12.3, 64-bit Linux.
 import sys
 from array import array
@@ -226,7 +226,7 @@ The stable lesson is not the exact timing numbers. It is the algorithmic model:
 - `set` answers membership by hashing and probing
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 import timeit
 from array import array
 
@@ -317,7 +317,7 @@ The operational lesson is conservative:
 - bad when you need mixed types, hash-table membership semantics, or the broad API convenience of `list`
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 from array import array
 
 def load_sensor_window(readings):
@@ -360,7 +360,7 @@ Do not publish CPython measurements as if they were language guarantees. Use the
 `tuple` immutability is shallow. A tuple containing a list is still exposed to inner mutation and is not hashable.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 record = ("batch-1", [])
 record[1].append("row-1")
 print(record)
@@ -376,7 +376,7 @@ except TypeError as exc:
 `array.array` is homogeneous. The typecode is a real constraint, not a comment.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 from array import array
 
 values = array("I", [1, 2, 3])

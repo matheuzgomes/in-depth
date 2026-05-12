@@ -1,7 +1,7 @@
 Async servers spend most of their life waiting: waiting for connections, waiting for readable sockets, waiting for output buffers to drain, and then cleaning up deterministically.
 
 ```python
-# Works on Python 3.7+
+# [OLDER / 3.7-3.8, CURRENT - 3.10-3.14] Works on Python 3.7+
 async def handle(reader, writer):
     line = await reader.readline()
     writer.write(line.upper())

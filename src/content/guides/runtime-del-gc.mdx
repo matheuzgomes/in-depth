@@ -5,7 +5,7 @@
 Use `del` to remove references from names, attributes, items, or slices. Use context managers or explicit cleanup for external resources. Do not use `__del__` as your normal correctness mechanism.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 payload = {"items": [1, 2, 3]}
 alias = payload
 
@@ -21,7 +21,7 @@ The language-level rule is reachability: an object may be reclaimed after it bec
 - periodic cycle detection via the cyclic garbage collector
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 import gc
 
 print(gc.get_threshold())
@@ -31,7 +31,7 @@ print(gc.get_count())
 Those thresholds and counters are CPython runtime tuning details, not language guarantees. They exist because pure reference counting cannot reclaim unreachable cycles.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 a = []
 b = [a]
 a.append(b)
@@ -49,7 +49,7 @@ On interpreters such as PyPy, object reclamation timing can differ materially be
 `weakref.finalize` is usually the safer observation mechanism when you need a callback attached to object lifetime without keeping the object alive.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 import gc
 import weakref
 
@@ -79,7 +79,7 @@ If cleanup affects correctness, you need deterministic cleanup:
 - explicit `close()` or `shutdown()` APIs when the lifecycle is part of your domain
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 with open("events.log", encoding="utf-8") as fp:
     for line in fp:
         process(line)
@@ -96,7 +96,7 @@ Using `del` to "free memory now" is often cargo cult. It only helps when a refer
 Use `del` sparingly for large temporary objects inside long-running scopes when that genuinely reduces retained memory pressure.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 from pathlib import Path
 
 def summarize(path):

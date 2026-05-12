@@ -5,7 +5,7 @@ The standard library `logging` package is a hierarchical event pipeline: loggers
 Application modules should usually get a named logger and emit stable messages plus safe contextual fields. Libraries should not call `basicConfig()` as a side effect because configuration belongs to the application boundary.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 import logging
 
 log = logging.getLogger(__name__)
@@ -21,7 +21,7 @@ Logger names form a hierarchy. `a.b.c` is a child of `a.b`, which is a child of 
 A logging call first checks whether the logger is enabled for that level. If it is, a `LogRecord` is created, then passed through logger filtering, handler filtering, formatting, and emission. Unless propagation is disabled, the record walks up the logger hierarchy toward parent handlers.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 import logging
 
 logger = logging.getLogger("a.b")
@@ -32,7 +32,7 @@ print(logger.isEnabledFor(logging.INFO))
 That `isEnabledFor` gate is why `%`-style argument logging matters. With:
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 log.debug("loaded %s rows from %s", row_count, source)
 ```
 
@@ -43,7 +43,7 @@ the expensive final string formatting is deferred until the message is actually 
 Use `logger.exception()` inside an exception handler to include traceback information. It is effectively `error(..., exc_info=True)`.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 try:
     process_order(order)
 except PaymentError:
@@ -64,7 +64,7 @@ The stdlib does not impose a structured logging schema. JSON output or downstrea
 Never log secrets, raw tokens, passwords, full request bodies, or unnecessary personal data. Logs are durable operational data, not a safe debugging scratchpad.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 safe = {
     "order_id": order.id,
     "customer_id": order.customer_id,
@@ -94,7 +94,7 @@ Configure logging once at the application entry point. Use module loggers everyw
 - `critical` for process- or system-level failure
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 import logging
 
 def configure_logging():

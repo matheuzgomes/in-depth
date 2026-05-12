@@ -18,7 +18,7 @@ The right mental model is not "async makes things parallel." The right mental mo
 - the event loop can run something else
 
 ```python
-# Works on Python 3.7+
+# [OLDER / 3.7-3.8, CURRENT - 3.10-3.14] Works on Python 3.7+
 import asyncio
 
 async def fetch_flag():
@@ -55,7 +55,7 @@ The official docs use "awaitable" as the umbrella term because not everything aw
 One of the easiest ways to read async code is to ignore the scheduling details first and read it almost as if it were synchronous, then come back and mark every `await` as a potential suspension boundary.
 
 ```python
-# Works on Python 3.7+
+# [OLDER / 3.7-3.8, CURRENT - 3.10-3.14] Works on Python 3.7+
 async def load_user_page(client, user_id):
     profile = await fetch_profile(client, user_id)
     orders = await fetch_orders(client, user_id)
@@ -84,7 +84,7 @@ The language reference defines `await` in terms of the awaitable protocol. In pr
 - `asyncio.Future`
 
 ```python
-# Works on Python 3.7+
+# [OLDER / 3.7-3.8, CURRENT - 3.10-3.14] Works on Python 3.7+
 import asyncio
 
 async def child():
@@ -118,7 +118,7 @@ The official language-level contract is the async/await behavior itself. The exa
 Fluent Python emphasizes a real production constraint: asynchronous design is not a small cosmetic switch. If one critical layer blocks, the benefit collapses.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 import asyncio
 import time
 
@@ -153,7 +153,7 @@ Because this project targets current Python, native coroutine syntax is the base
 Calling an `async def` function does **not** run it immediately. It creates a coroutine object.
 
 ```python
-# Works on Python 3.7+
+# [OLDER / 3.7-3.8, CURRENT - 3.10-3.14] Works on Python 3.7+
 async def hello():
     return "hi"
 

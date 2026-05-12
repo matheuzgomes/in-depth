@@ -3,7 +3,7 @@
 import { useState } from "react"
 import type { LoopSimulationData } from "@/types"
 import { T } from "@/lib/tokens"
-import { ExplanationPanel, SimulationCodePanel, SimulationControls, SimulationShell, StateCard } from "@/components/ui/simulationShared"
+import { ExplanationPanel, SimulationCodePanel, SimulationControls, SimulationGrid, SimulationSection, SimulationShell, StateCard } from "@/components/ui/simulationShared"
 
 interface LoopSimulationProps {
   data: LoopSimulationData
@@ -42,27 +42,13 @@ export function LoopSimulation({ data }: LoopSimulationProps) {
 
       <SimulationCodePanel sourceCode={data.sourceCode} activeLine={step.activeLine} />
 
-      <div style={{
-        display: "grid",
-        gap: 12,
-        gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
-        marginBottom: 16,
-      }}>
+      <SimulationGrid minColumn={170}>
         <StateCard label={data.itemVariableLabel} value={step.currentItem === null ? "not bound yet" : String(step.currentItem)} color={T.teal} />
         <StateCard label={data.accumulatorLabel} value={String(step.accumulatorValue)} color={T.blue} />
         <StateCard label="Traversal state" value={step.done ? data.resultLabel : step.pointer === null ? "ready to iterate" : `reading index ${step.pointer}`} color={T.amber} />
-      </div>
+      </SimulationGrid>
 
-      <div style={{
-        borderRadius: 12,
-        border: `0.5px solid ${T.border}`,
-        background: T.bg2,
-        padding: "14px 14px 16px",
-        marginBottom: 14,
-      }}>
-        <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: T.text1, marginBottom: 12 }}>
-          {data.iterableLabel}
-        </div>
+      <SimulationSection title={data.iterableLabel} tone="neutral">
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
           {data.items.map((item, index) => {
             const isCurrent = step.pointer === index
@@ -102,7 +88,7 @@ export function LoopSimulation({ data }: LoopSimulationProps) {
             )
           })}
         </div>
-      </div>
+      </SimulationSection>
 
       <ExplanationPanel
         explanation={step.explanation}

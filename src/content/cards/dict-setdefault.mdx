@@ -1,7 +1,7 @@
 When a dictionary value is itself mutable, initialize once and mutate the returned object. That avoids double lookups and noisy guards.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 index = {}
 pairs = [("python", 3), ("dict", 8), ("python", 14)]
 

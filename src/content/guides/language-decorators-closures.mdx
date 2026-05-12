@@ -5,7 +5,7 @@ Decorators and closures are not separate magic features. They are consequences o
 A decorator runs when the function definition executes, usually during module import, and rebinds the function name to whatever object the decorator returns.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 def trace(fn):
     print("decorating", fn.__name__)
     return fn
@@ -18,7 +18,7 @@ def run():
 A closure is a function that retains access to free variables from an enclosing scope after that outer scope has returned.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 def make_averager():
     values = []
 
@@ -38,7 +38,7 @@ print(avg(20))
 Python uses lexical scoping: local, enclosing, global, then built-in name resolution. When an inner function references a variable from an enclosing function, CPython stores that binding in a closure cell.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 import dis
 
 def outer():
@@ -58,7 +58,7 @@ On CPython, the bytecode for the inner function uses `LOAD_DEREF` to read from t
 `nonlocal` is required only when rebinding the outer name, not when mutating an object referenced by that name.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 def make_counter():
     count = 0
 
@@ -81,7 +81,7 @@ Decorators add another Python call boundary. In very hot paths, that extra frame
 Without `functools.wraps`, wrappers also lose metadata such as `__name__`, `__doc__`, and `__wrapped__`, which breaks introspection, debugging, and framework behavior.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 from functools import wraps
 from time import perf_counter
 

@@ -5,7 +5,7 @@ Python gives you several ways to build record-like objects, but they do not have
 Use `collections.namedtuple` for immutable tuple-compatible records without a heavy class body. Use `typing.NamedTuple` when tuple behavior and annotations both matter. Use `@dataclass` when you want a normal class with generated methods and more control over mutability and validation.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 from collections import namedtuple
 
 City = namedtuple("City", "name country population")
@@ -16,7 +16,7 @@ print(tokyo._asdict())
 ```
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 from typing import NamedTuple
 
 class TypedCity(NamedTuple):
@@ -26,7 +26,7 @@ class TypedCity(NamedTuple):
 ```
 
 ```python
-# Works on Python 3.7+
+# [OLDER / 3.7-3.8, CURRENT - 3.10-3.14] Works on Python 3.7+
 from dataclasses import dataclass
 
 @dataclass
@@ -55,7 +55,7 @@ Measured locally on CPython 3.12.3, 64-bit Linux:
 - slotted dataclass instance with two fields: `48` bytes and no `__dict__`
 
 ```python
-# Works on Python 3.10+
+# [CURRENT - 3.10-3.14] Works on Python 3.10+
 # Example byte counts below were measured on CPython 3.12.3, 64-bit Linux.
 import sys
 from collections import namedtuple
@@ -89,7 +89,7 @@ All three tools generate useful representation and equality behavior, but they g
 - dataclasses preserve attribute-centric class semantics
 
 ```python
-# Works on Python 3.7+
+# [OLDER / 3.7-3.8, CURRENT - 3.10-3.14] Works on Python 3.7+
 from dataclasses import dataclass
 
 @dataclass(frozen=True)
@@ -126,7 +126,7 @@ Use this decision rule:
 - mutable domain object with validation hooks: `@dataclass`
 
 ```python
-# Works on Python 3.7+
+# [OLDER / 3.7-3.8, CURRENT - 3.10-3.14] Works on Python 3.7+
 from dataclasses import dataclass
 
 @dataclass

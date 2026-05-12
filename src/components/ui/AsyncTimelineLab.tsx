@@ -3,7 +3,17 @@
 import { useMemo, useState } from "react"
 import type { AsyncTimelineLabData, AsyncTimelineStatus } from "@/types"
 import { T } from "@/lib/tokens"
-import { ExplanationPanel, SimulationCodePanel, SimulationControls, SimulationShell, StateCard } from "@/components/ui/simulationShared"
+import {
+  ExplanationPanel,
+  SimulationCodePanel,
+  SimulationControls,
+  SimulationGrid,
+  SimulationPillButton,
+  SimulationPillRow,
+  SimulationSection,
+  SimulationShell,
+  StateCard,
+} from "@/components/ui/simulationShared"
 
 interface AsyncTimelineLabProps {
   data: AsyncTimelineLabData
@@ -45,29 +55,16 @@ export function AsyncTimelineLab({ data }: AsyncTimelineLabProps) {
       }}
       stepLabel={open ? `${scenario.label} · Tick ${step.tick} · ${step.label}` : undefined}
     >
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
+      <SimulationPillRow>
         {data.scenarios.map((item) => (
-          <button
-            key={item.id}
-            onClick={() => {
+          <SimulationPillButton key={item.id} selected={item.id === scenario.id} onClick={() => {
               setScenarioId(item.id)
               setStepIndex(0)
-            }}
-            style={{
-              borderRadius: 999,
-              border: `0.5px solid ${item.id === scenario.id ? `${T.teal.accent}77` : T.border}`,
-              background: item.id === scenario.id ? T.teal.bg : T.bg2,
-              color: item.id === scenario.id ? T.teal.fg : T.text2,
-              padding: "7px 11px",
-              fontSize: 11.5,
-              fontWeight: 650,
-              cursor: "pointer",
-            }}
-          >
+            }}>
             {item.label}
-          </button>
+          </SimulationPillButton>
         ))}
-      </div>
+      </SimulationPillRow>
 
       <SimulationControls
         isFirst={isFirst}
@@ -80,27 +77,13 @@ export function AsyncTimelineLab({ data }: AsyncTimelineLabProps) {
 
       <SimulationCodePanel sourceCode={scenario.sourceCode} activeLine={step.activeLine} />
 
-      <div style={{
-        display: "grid",
-        gap: 12,
-        gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-        marginBottom: 16,
-      }}>
+      <SimulationGrid minColumn={180}>
         <StateCard label="Scenario" value={scenario.label} color={T.teal} />
         <StateCard label="Event loop tick" value={String(step.tick)} color={T.blue} />
         <StateCard label="Current event" value={step.event} color={T.amber} minHeight={88} />
-      </div>
+      </SimulationGrid>
 
-      <div style={{
-        borderRadius: 12,
-        border: `0.5px solid ${T.border}`,
-        background: T.bg2,
-        padding: "14px 14px 16px",
-        marginBottom: 14,
-      }}>
-        <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: T.text1, marginBottom: 12 }}>
-          Task lanes
-        </div>
+      <SimulationSection title="Task lanes" tone="neutral">
         <div style={{ display: "grid", gap: 10 }}>
           {step.tasks.map((task) => {
             const style = STATUS_STYLE[task.status]
@@ -128,7 +111,7 @@ export function AsyncTimelineLab({ data }: AsyncTimelineLabProps) {
             )
           })}
         </div>
-      </div>
+      </SimulationSection>
 
       <ExplanationPanel
         title="What the event loop is doing now"

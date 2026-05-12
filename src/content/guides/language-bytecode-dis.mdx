@@ -12,7 +12,7 @@ Use the `dis` module when you need to answer questions like:
 - did CPython compile this into one straightforward instruction path or several dispatch steps?
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 import dis
 
 def total(xs):
@@ -48,7 +48,7 @@ That is why functions expose attributes such as:
 - `__code__.co_freevars`
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 def make_adder(base):
     def add(x):
         return base + x
@@ -82,7 +82,7 @@ In current CPython, the instruction set is version-sensitive and implementation-
 For example, locals and closure cells are not loaded the same way:
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 import dis
 
 def outer():
@@ -107,7 +107,7 @@ The two most useful entry points are:
 - `dis.get_instructions(...)` for structured instruction objects
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 import dis
 
 def scale(x, y):
@@ -130,7 +130,7 @@ For plain debugging or education, `dis.dis` is usually enough.
 On current CPython, `dis.dis` also exposes version-sensitive options for cache/specialization visibility:
 
 ```python
-# Requires Python 3.11+ [PEP 659]
+# [CURRENT - 3.11-3.14] Requires Python 3.11+ [PEP 659]
 import dis
 
 def total(xs):
@@ -149,7 +149,7 @@ Bytecode becomes especially informative when two snippets are semantically simil
 List comprehension vs manual append loop is the standard example:
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 import dis
 
 def manual(rows):
@@ -203,7 +203,7 @@ Reasons:
 - adaptive specialization in CPython 3.11+ can change the effective execution path after warm-up
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 import timeit
 
 print(timeit.timeit("[x * 2 for x in range(1000)]", number=10000))
@@ -256,7 +256,7 @@ Also do not present CPython opcode behavior as a Python language guarantee. PyPy
 Another trap: `dis` output is observational, not normative. It tells you what this interpreter version emitted, not what future versions must emit.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 import dis
 
 def classify(x):

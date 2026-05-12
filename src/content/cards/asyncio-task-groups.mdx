@@ -1,7 +1,7 @@
 `asyncio` concurrency is cooperative. Tasks switch only at `await`, so blocking work blocks every task on the event loop.
 
 ```python
-# Requires Python 3.11+
+# [CURRENT - 3.11-3.14] Requires Python 3.11+
 import asyncio
 
 async def fetch_user():

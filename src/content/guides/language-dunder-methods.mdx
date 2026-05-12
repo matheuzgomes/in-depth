@@ -20,7 +20,7 @@ This is why custom classes can feel native in Python: the language does not need
 One exception matters immediately: `is` is **not** a special-method dispatch point. Identity comparison is direct.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 class UserId:
     def __init__(self, value):
         self.value = value
@@ -130,7 +130,7 @@ That distinction is why the sentence "the `is` operator uses `__eq__`" is wrong.
 - `is` never does
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 class Token:
     def __eq__(self, other):
         print("__eq__ called")
@@ -149,7 +149,7 @@ For truth testing:
 - if `__bool__` is absent, Python can use `__len__`
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 class Batch:
     def __init__(self, rows):
         self.rows = list(rows)
@@ -167,7 +167,7 @@ For membership:
 - if absent, Python can fall back to iteration
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 class RoleSet:
     def __init__(self, roles):
         self._roles = set(roles)
@@ -184,7 +184,7 @@ For iteration:
 - that normally dispatches to `__iter__`
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 class Countdown:
     def __init__(self, start):
         self.start = start
@@ -205,7 +205,7 @@ print(list(Countdown(3)))
 If two objects compare equal, their hashes must also be equal. That rule matters because dictionaries and sets use hash lookup first and equality second. If you break the relationship, keys and set membership become unreliable.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 class UserId:
     def __init__(self, value):
         self.value = value
@@ -240,7 +240,7 @@ Good `__repr__` practice:
 - keep it developer-facing, not user-marketing-facing
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 class Job:
     def __init__(self, name, priority):
         self.name = name
@@ -304,7 +304,7 @@ Do not rely on `__repr__` for end-user formatting or machine-stable serializatio
 Do not use `is` where you mean value equality.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 name = "".join(["A", "n", "a"])
 target = "Ana"
 

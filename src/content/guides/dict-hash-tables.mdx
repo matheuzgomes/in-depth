@@ -7,7 +7,7 @@ Dictionaries are Python's general-purpose hash table. They trade memory for fast
 A dict key must be hashable: its hash must be consistent with equality, and whatever data determines that hash must not change while the object is used as a key.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 good = {
     ("region", "BR"): "active",
     42: "answer",
@@ -33,7 +33,7 @@ The portable rule is:
 The CPython implementation uses an open-addressed hash table with probing for collisions. Exact collision resolution details are implementation-specific and have changed across releases, but the performance model remains the same: good hashes spread keys, bad hashes create more probes.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 class BadKey:
     def __init__(self, value):
         self.value = value
@@ -61,7 +61,7 @@ Dicts reserve significantly more memory than a plain sequence because the table 
 - `32` items -> `1168` bytes
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 # Example byte counts below were measured on CPython 3.12.3, 64-bit Linux.
 import sys
 
@@ -77,7 +77,7 @@ Those jumps exist because CPython maintains spare capacity to keep probe counts 
 Dictionary insertion order is guaranteed by the language in Python 3.7+. CPython 3.6 preserved it as an implementation detail, but Python 3.6 is End-of-Life and should not be treated as a production baseline.
 
 ```python
-# Works on Python 3.7+
+# [OLDER / 3.7-3.8, CURRENT - 3.10-3.14] Works on Python 3.7+
 config = {}
 config["host"] = "localhost"
 config["port"] = 5432
@@ -89,7 +89,7 @@ print(list(config))
 Dict internals also matter for objects. CPython uses key-sharing dictionaries for many instance `__dict__` layouts when instances of a class have the same attribute names. Defining attributes consistently in `__init__` helps preserve that memory optimization.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 class Person:
     def __init__(self, name, age):
         self.name = name
@@ -109,7 +109,7 @@ The exact byte counts in this guide are CPython 3.12.3, 64-bit measurements take
 Never mutate an object's equality-relevant fields after inserting it into a dict. The object may become unfindable because the table placement was based on the old hash/equality state.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 from dataclasses import dataclass
 
 @dataclass(unsafe_hash=True)

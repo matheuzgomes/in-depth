@@ -13,7 +13,7 @@ Async iteration is for streams whose next value may require waiting.
 The key point is still cooperative suspension: each next item may require `await`.
 
 ```python
-# Requires Python 3.6+ [PEP 525]
+# [OLDER / 3.6-3.9, CURRENT - 3.10-3.14] Requires Python 3.6+ [PEP 525]
 import asyncio
 
 async def ticker():
@@ -29,7 +29,7 @@ async def ticker():
 An async iterable is an object that supports asynchronous iteration. The consumer uses `async for`, and each step may suspend.
 
 ```python
-# Requires Python 3.6+ [PEP 492]
+# [OLDER / 3.6-3.9, CURRENT - 3.10-3.14] Requires Python 3.6+ [PEP 492]
 import asyncio
 
 async def main():
@@ -55,7 +55,7 @@ An async generator function mixes:
 That makes it the async counterpart of a regular generator function.
 
 ```python
-# Requires Python 3.6+ [PEP 525]
+# [OLDER / 3.6-3.9, CURRENT - 3.10-3.14] Requires Python 3.6+ [PEP 525]
 import asyncio
 
 async def ticker():
@@ -78,7 +78,7 @@ That is why async generators are natural for:
 Async comprehensions and async generator expressions let you write compact transformations over async sources.
 
 ```python
-# Requires Python 3.6+ [PEP 530]
+# [OLDER / 3.6-3.9, CURRENT - 3.10-3.14] Requires Python 3.6+ [PEP 530]
 import asyncio
 
 async def collect_even():

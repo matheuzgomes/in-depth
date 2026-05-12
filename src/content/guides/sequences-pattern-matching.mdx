@@ -7,7 +7,7 @@ Sequence pattern matching is structural dispatch. It is useful when the first qu
 Use `match` when you want one branch to both validate a shape and bind names from it. The feature was introduced in Python 3.10 and specified by [PEP 634](https://peps.python.org/pep-0634/).
 
 ```python
-# Requires Python 3.10+ [PEP 634]
+# [CURRENT - 3.10-3.14] Requires Python 3.10+ [PEP 634]
 def handle(command: list[str]):
     match command:
         case ["move", x, y]:
@@ -37,7 +37,7 @@ Patterns are tried top to bottom. A successful branch may:
 On current CPython, this is visible in dedicated bytecode such as `MATCH_SEQUENCE`, `GET_LEN`, and `UNPACK_SEQUENCE`.
 
 ```python
-# Requires Python 3.10+ [PEP 634]
+# [CURRENT - 3.10-3.14] Requires Python 3.10+ [PEP 634]
 import dis
 
 def classify(x):
@@ -55,7 +55,7 @@ That bytecode detail is CPython-specific. The portable contract is the language 
 Variable-length patterns use starred captures, which behave like structural unpacking, not regex repetition.
 
 ```python
-# Requires Python 3.10+ [PEP 634]
+# [CURRENT - 3.10-3.14] Requires Python 3.10+ [PEP 634]
 def parse_row(row):
     match row:
         case [name, email, *tags]:
@@ -71,7 +71,7 @@ print(parse_row(["Ana", "a@example.com", "admin", "billing"]))
 Sequence patterns are for actual sequence-like subjects. They do not treat `str`, `bytes`, or `bytearray` as sequences of characters or bytes for matching, even though those objects are iterable.
 
 ```python
-# Requires Python 3.10+ [PEP 634]
+# [CURRENT - 3.10-3.14] Requires Python 3.10+ [PEP 634]
 def route(line: str):
     match line.split():
         case ["GET", path]:
@@ -89,7 +89,7 @@ That rule prevents accidental character-by-character matches on text payloads, w
 `match` and `case` are soft keywords in Python 3.10+. Python 3.9 and below are End-of-Life and do not support this syntax.
 
 ```python
-# Requires Python 3.10+ [PEP 634]
+# [CURRENT - 3.10-3.14] Requires Python 3.10+ [PEP 634]
 match = "ordinary name outside a match statement"
 case = "also ordinary here"
 print(match, case)
@@ -104,7 +104,7 @@ Name captures are not value comparisons unless you use literals, guards, or dott
 Guards run only after the structural pattern matches. Keep them pure and cheap. They are part of branch selection, not a place for side effects.
 
 ```python
-# Requires Python 3.10+ [PEP 634]
+# [CURRENT - 3.10-3.14] Requires Python 3.10+ [PEP 634]
 def classify(point):
     match point:
         case [0, 0]:

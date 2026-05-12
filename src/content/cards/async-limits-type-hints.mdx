@@ -1,7 +1,7 @@
 Async helps when work waits on external readiness. It does not make CPU-bound Python code parallel, and it does not erase the need to type protocols like `Awaitable`, `AsyncIterator`, or `AsyncGenerator` correctly.
 
 ```python
-# Works on Python 3.8+
+# [OLDER / 3.9, CURRENT - 3.10-3.14] Works on Python 3.9+ [PEP 585]
 from collections.abc import AsyncIterator
 
 async def stream_ids() -> AsyncIterator[int]:

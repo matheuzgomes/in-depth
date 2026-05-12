@@ -7,7 +7,7 @@ An iterable is anything Python can call `iter()` on. The production question is 
 Use a concrete sequence when you need repeated passes, random access, slicing, or a stable snapshot. Use an iterator or generator when one-pass streaming is enough and memory pressure matters.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 def read_lines(path):
     with open(path, encoding="utf-8") as fp:
         for line in fp:
@@ -17,7 +17,7 @@ def read_lines(path):
 Generators produce values lazily. That lowers peak memory usage because the whole result does not exist at once.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 numbers = (int(part) for part in "1,2,3".split(","))
 
 print(list(numbers))
@@ -34,7 +34,7 @@ The iterator protocol is two operations:
 A `for` loop is syntax around those calls.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 values = iter([10, 20])
 print(next(values))
 print(next(values))
@@ -47,7 +47,7 @@ Generator functions are more than "functions that yield." On CPython they keep a
 That is why generators are memory-efficient for result size, but not free: each live generator still retains its frame state and anything reachable from it.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 def chunks(lines):
     buffer = []
     for line in lines:
@@ -68,7 +68,7 @@ There are three materially different storage models:
 - streaming iterables such as generators: store control state, not the whole output
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 from array import array
 
 row = ["Ana", 42, {"active": True}]
@@ -89,7 +89,7 @@ The iterator protocol and generator semantics are stable Python 3 behavior. Mode
 Do not call `len()` or slice an arbitrary iterable unless the API promises a sized sequence. Many iterables cannot answer length without consuming themselves, and many iterators cannot be restarted.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 def first_match(rows, predicate):
     for row in rows:
         if predicate(row):
@@ -115,7 +115,7 @@ Use these annotation rules:
 - return a concrete container when callers need replayability and ownership
 
 ```python
-# Works on Python 3.9+
+# [OLDER / 3.9, CURRENT - 3.10-3.14] Works on Python 3.9+
 from collections.abc import Iterable
 
 def non_empty(lines: Iterable[str]):
@@ -128,7 +128,7 @@ def non_empty(lines: Iterable[str]):
 Materialize deliberately:
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 def normalized_snapshot(lines):
     return [line.strip() for line in lines if line.strip()]
 ```

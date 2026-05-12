@@ -3,7 +3,7 @@
 import { useState } from "react"
 import type { DictLookupSimulationData } from "@/types"
 import { T } from "@/lib/tokens"
-import { ExplanationPanel, SimulationCodePanel, SimulationControls, SimulationShell, StateCard } from "@/components/ui/simulationShared"
+import { ExplanationPanel, SimulationCodePanel, SimulationControls, SimulationGrid, SimulationSection, SimulationShell, StateCard } from "@/components/ui/simulationShared"
 
 interface DictLookupSimulationProps {
   data: DictLookupSimulationData
@@ -48,27 +48,13 @@ export function DictLookupSimulation({ data }: DictLookupSimulationProps) {
 
       <SimulationCodePanel sourceCode={data.sourceCode} activeLine={step.activeLine} />
 
-      <div style={{
-        display: "grid",
-        gap: 12,
-        gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
-        marginBottom: 16,
-      }}>
+      <SimulationGrid minColumn={170}>
         <StateCard label="Lookup key" value={step.lookupKey} color={T.teal} />
         <StateCard label="Home bucket" value={String(step.homeBucket)} color={T.amber} />
         <StateCard label="Current probe" value={step.probeBucket === null ? "not probing yet" : String(step.probeBucket)} color={T.blue} />
-      </div>
+      </SimulationGrid>
 
-      <div style={{
-        borderRadius: 12,
-        border: `0.5px solid ${T.border}`,
-        background: T.bg2,
-        padding: "14px 14px 16px",
-        marginBottom: 14,
-      }}>
-        <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: T.text1, marginBottom: 12 }}>
-          {data.tableLabel}
-        </div>
+      <SimulationSection title={data.tableLabel} tone="neutral">
         <div style={{ display: "grid", gap: 10, gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))" }}>
           {step.slots.map((slot, index) => {
             const style = STATUS_STYLE[slot.status]
@@ -88,7 +74,7 @@ export function DictLookupSimulation({ data }: DictLookupSimulationProps) {
             )
           })}
         </div>
-      </div>
+      </SimulationSection>
 
       <ExplanationPanel
         explanation={step.explanation}

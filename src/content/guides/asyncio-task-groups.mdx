@@ -5,7 +5,7 @@
 `await` is the scheduling boundary. A coroutine that does long CPU work without awaiting blocks the entire event loop thread.
 
 ```python
-# Works on Python 3.7+
+# [OLDER / 3.7-3.8, CURRENT - 3.10-3.14] Works on Python 3.7+
 async def fetch(client, url):
     response = await client.get(url)
     return response.status_code, await response.text()
@@ -14,7 +14,7 @@ async def fetch(client, url):
 Use `TaskGroup` in Python 3.11+ when several child tasks belong to one parent operation and should succeed or fail as a unit.
 
 ```python
-# Requires Python 3.11+
+# [CURRENT - 3.11-3.14] Requires Python 3.11+
 import asyncio
 
 async def load_user_page(user_id):
@@ -30,7 +30,7 @@ async def load_user_page(user_id):
 The event loop runs ready callbacks and tasks. When a coroutine awaits an incomplete awaitable, its task is suspended and the loop can run another ready task. This is cooperative scheduling: progress depends on hitting await points.
 
 ```python
-# Works on Python 3.7+
+# [OLDER / 3.7-3.8, CURRENT - 3.10-3.14] Works on Python 3.7+
 import asyncio
 
 async def worker(name, delay):
@@ -57,7 +57,7 @@ CPython details such as selector/proactor implementations and internal task obje
 That behavior is much safer than "fire off tasks and hope you remembered to await them all."
 
 ```python
-# Requires Python 3.11+
+# [CURRENT - 3.11-3.14] Requires Python 3.11+
 import asyncio
 
 async def handle_request(user_id):
@@ -76,7 +76,7 @@ async def handle_request(user_id):
 Unbounded concurrency can overload your process, upstream service, connection pool, or file descriptor limits. Bound fan-out explicitly.
 
 ```python
-# Works on Python 3.7+
+# [OLDER / 3.7-3.8, CURRENT - 3.10-3.14] Works on Python 3.7+
 import asyncio
 
 async def fetch_all(urls, client, limit=20):
@@ -92,7 +92,7 @@ async def fetch_all(urls, client, limit=20):
 Blocking file I/O, compression, JSON parsing of huge payloads, and synchronous clients still block the event loop if called directly. `asyncio.to_thread()` can move blocking call sites to a worker thread, but that is mainly for blocking I/O or C extensions that release the GIL. Pure Python CPU work still contends on the GIL.
 
 ```python
-# Works on Python 3.9+
+# [OLDER / 3.9, CURRENT - 3.10-3.14] Works on Python 3.9+
 import asyncio
 import json
 from pathlib import Path

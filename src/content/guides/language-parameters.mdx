@@ -5,7 +5,7 @@ A Python function signature is executable API design. It controls how arguments 
 Use ordinary positional-or-keyword parameters for the stable core of the operation. Use `*` to force options to be keyword-only. Use `/` to make parameters positional-only when their names are not part of the public contract.
 
 ```python
-# Requires Python 3.8+ [PEP 570]
+# [OLDER / 3.8-3.9, CURRENT - 3.10-3.14] Requires Python 3.8+ [PEP 570]
 def resize(image, width, height, /, *, keep_aspect=True, quality=85):
     return (image, width, height, keep_aspect, quality)
 
@@ -19,7 +19,7 @@ Keyword-only options are not cosmetic. They prevent opaque call sites such as `r
 Before the function body runs, Python binds arguments to parameters according to the call rules in the language reference. Extra positional arguments become a tuple via `*args`. Extra keyword arguments become a dict via `**kwargs`.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 import inspect
 
 def sample(a, b=1, /, c=2, *, d=3, **kw):
@@ -33,7 +33,7 @@ print(inspect.signature(sample))
 On CPython, modern call performance is helped by optimizations such as vectorcall, but that does not change the semantic model: `*args` still means a tuple object is logically created, and `**kwargs` still means a mapping of extra keywords.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 def tag(name, *content, class_=None, **attrs):
     if class_ is not None:
         attrs["class"] = class_
@@ -53,7 +53,7 @@ Keyword-only parameters came from [PEP 3102](https://peps.python.org/pep-3102/).
 Open-ended `**kwargs` signatures weaken the API boundary if you do not validate them. Unknown options should usually fail immediately with `TypeError`, not drift deeper into the call graph.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 def configure(required, **options):
     allowed = {"timeout", "retries"}
     unknown = options.keys() - allowed
@@ -73,7 +73,7 @@ Remember that defaults are stored on the function object and reused. Mutable def
 Use `/` when parameter names are an implementation detail or may change later. Use `*` when readability and caller safety matter more than brevity. Use explicit sentinels when `None` is a real business value.
 
 ```python
-# Requires Python 3.8+ [PEP 570]
+# [OLDER / 3.8-3.9, CURRENT - 3.10-3.14] Requires Python 3.8+ [PEP 570]
 _missing = object()
 
 def lookup(key, /, default=_missing, *, case_sensitive=True):

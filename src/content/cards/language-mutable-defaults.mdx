@@ -1,7 +1,7 @@
 Default arguments are created once when the function is defined. If the default is mutable, every call shares it.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 def add_user(name, users=[]):  # shared list
     users.append(name)
     return users

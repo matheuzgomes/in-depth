@@ -3,7 +3,16 @@
 import { useMemo, useState } from "react"
 import type { BytecodeCase, BytecodeCaseId, BytecodeLabData } from "@/types"
 import { T } from "@/lib/tokens"
-import { ExplanationPanel, SimulationCodePanel, SimulationShell, StateCard } from "@/components/ui/simulationShared"
+import {
+  ExplanationPanel,
+  SimulationCodePanel,
+  SimulationGrid,
+  SimulationPillButton,
+  SimulationPillRow,
+  SimulationSelectableCard,
+  SimulationShell,
+  StateCard,
+} from "@/components/ui/simulationShared"
 
 interface BytecodeLabProps {
   data: BytecodeLabData
@@ -30,63 +39,35 @@ export function BytecodeLab({ data }: BytecodeLabProps) {
       }}
       stepLabel={open ? `${current.label} · ${current.question}` : undefined}
     >
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
+      <SimulationPillRow>
         {data.cases.map((item) => (
-          <button
-            key={item.id}
-            onClick={() => setSelectedCase(item.id)}
-            style={{
-              borderRadius: 999,
-              border: `1px solid ${item.id === selectedCase ? `${T.amber.accent}77` : T.border}`,
-              background: item.id === selectedCase ? T.amber.bg : T.bg2,
-              color: item.id === selectedCase ? T.amber.fg : T.text2,
-              padding: "7px 11px",
-              fontSize: 11.5,
-              fontWeight: 650,
-              cursor: "pointer",
-            }}
-          >
+          <SimulationPillButton key={item.id} selected={item.id === selectedCase} color={T.amber} onClick={() => setSelectedCase(item.id)}>
             {item.label}
-          </button>
+          </SimulationPillButton>
         ))}
-      </div>
+      </SimulationPillRow>
 
-      <div style={{
-        display: "grid",
-        gap: 12,
-        gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-        marginBottom: 16,
-      }}>
+      <SimulationGrid minColumn={240}>
         {data.cases.map((item) => (
           <BytecodeSummaryCard key={item.id} item={item} selected={item.id === selectedCase} onSelect={() => setSelectedCase(item.id)} />
         ))}
-      </div>
+      </SimulationGrid>
 
       <SimulationCodePanel sourceCode={current.sourceCode} activeLine={1} />
 
       <DisassemblyPanel text={current.disassembly} />
 
-      <div style={{
-        display: "grid",
-        gap: 12,
-        gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-        marginBottom: 16,
-      }}>
+      <SimulationGrid minColumn={180}>
         <StateCard label="Question" value={current.question} color={T.amber} minHeight={88} />
         <StateCard label="Key opcodes" value={current.keyOpcodes.join(", ")} color={T.blue} minHeight={88} />
         <StateCard label="Version note" value={current.versionNote} color={T.teal} minHeight={88} />
-      </div>
+      </SimulationGrid>
 
-      <div style={{
-        display: "grid",
-        gap: 12,
-        gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-        marginBottom: 16,
-      }}>
+      <SimulationGrid minColumn={220}>
         <DetailPanel label="What the disassembly is telling you" body={current.headline} color={T.blue} />
         <DetailPanel label="Why it can matter" body={current.whyItCanMatter} color={T.green} />
         <DetailPanel label="Production rule" body={current.productionRule} color={T.amber} />
-      </div>
+      </SimulationGrid>
 
       <ExplanationPanel
         title="Interpretation warning"
@@ -110,31 +91,7 @@ function BytecodeSummaryCard({
   selected: boolean
   onSelect: () => void
 }) {
-  return (
-    <button
-      onClick={onSelect}
-      style={{
-        textAlign: "left",
-        borderRadius: 12,
-        border: `1px solid ${selected ? `${T.amber.accent}88` : T.border}`,
-        background: selected ? T.amber.bg : T.bg2,
-        padding: "13px 14px",
-        cursor: "pointer",
-      }}
-    >
-      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8, marginBottom: 8 }}>
-        <div style={{ fontSize: 14, fontWeight: 700, color: selected ? T.amber.fg : T.text1 }}>
-          {item.label}
-        </div>
-      </div>
-      <div style={{ fontSize: 12.5, color: T.text2, lineHeight: 1.65, marginBottom: 6 }}>
-        {item.question}
-      </div>
-      <div style={{ fontSize: 11.5, color: T.text3, lineHeight: 1.65 }}>
-        {item.headline}
-      </div>
-    </button>
-  )
+  return <SimulationSelectableCard title={item.label} body={item.question} footer={item.headline} selected={selected} onClick={onSelect} color={T.amber} />
 }
 
 function DetailPanel({

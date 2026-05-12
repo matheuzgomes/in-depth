@@ -3,7 +3,7 @@
 import { useState } from "react"
 import type { PatternMatchingSimulationData } from "@/types"
 import { T } from "@/lib/tokens"
-import { ExplanationPanel, SimulationCodePanel, SimulationControls, SimulationShell, StateCard } from "@/components/ui/simulationShared"
+import { ExplanationPanel, SimulationCodePanel, SimulationControls, SimulationGrid, SimulationSection, SimulationShell, StateCard } from "@/components/ui/simulationShared"
 
 interface PatternMatchingSimulationProps {
   data: PatternMatchingSimulationData
@@ -47,12 +47,7 @@ export function PatternMatchingSimulation({ data }: PatternMatchingSimulationPro
 
       <SimulationCodePanel sourceCode={data.sourceCode} activeLine={step.activeLine} />
 
-      <div style={{
-        display: "grid",
-        gap: 12,
-        gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
-        marginBottom: 16,
-      }}>
+      <SimulationGrid minColumn={170}>
         <StateCard label={data.subjectLabel} value={JSON.stringify(step.subject)} color={T.teal} />
         <StateCard
           label="Bound names"
@@ -61,18 +56,9 @@ export function PatternMatchingSimulation({ data }: PatternMatchingSimulationPro
           minHeight={88}
         />
         <StateCard label={data.resultLabel} value={step.resultValue ?? "not computed yet"} color={T.blue} />
-      </div>
+      </SimulationGrid>
 
-      <div style={{
-        borderRadius: 12,
-        border: `0.5px solid ${T.border}`,
-        background: T.bg2,
-        padding: "14px 14px 16px",
-        marginBottom: 14,
-      }}>
-        <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: T.text1, marginBottom: 12 }}>
-          Cases in source order
-        </div>
+      <SimulationSection title="Cases in source order" tone="neutral">
         <div style={{ display: "grid", gap: 10 }}>
           {step.cases.map((caseState, index) => {
             const style = CASE_STYLE[caseState.status]
@@ -97,7 +83,7 @@ export function PatternMatchingSimulation({ data }: PatternMatchingSimulationPro
             )
           })}
         </div>
-      </div>
+      </SimulationSection>
 
       <ExplanationPanel
         explanation={step.explanation}

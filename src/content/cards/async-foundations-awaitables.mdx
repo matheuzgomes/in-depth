@@ -1,7 +1,7 @@
 Native coroutines are driven by `await`. The important mental model is not "async means parallel" but "the coroutine can suspend cooperatively so the event loop can run something else."
 
 ```python
-# Works on Python 3.7+
+# [OLDER / 3.7-3.8, CURRENT - 3.10-3.14] Works on Python 3.7+
 import asyncio
 
 async def fetch_flag():

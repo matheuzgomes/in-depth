@@ -1,7 +1,7 @@
 Function signatures are part of your API. Positional-only and keyword-only markers let you make invalid calls impossible.
 
 ```python
-# Requires Python 3.8+ [PEP 570]
+# [OLDER / 3.8-3.9, CURRENT - 3.10-3.14] Requires Python 3.8+ [PEP 570]
 def connect(host, /, *, timeout=3.0, retries=2):
     return host, timeout, retries
 

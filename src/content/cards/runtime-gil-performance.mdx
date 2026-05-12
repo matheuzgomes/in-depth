@@ -1,7 +1,7 @@
 The GIL is a **CPython runtime lock** that allows only one thread at a time to execute Python bytecode in a regular build. That is why threads help I/O-bound workloads much more reliably than pure-Python CPU loops.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 from concurrent.futures import ThreadPoolExecutor
 
 def cpu_task(n):

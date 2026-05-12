@@ -10,7 +10,7 @@ Choose the container by representation and mutation pattern:
 - `memoryview`: zero-copy window over binary buffers
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 from collections import deque
 
 events = deque(maxlen=3)
@@ -33,7 +33,7 @@ Measured locally on CPython 3.12.3, 64-bit Linux:
 Those list and tuple measurements do **not** include the `1000` separate `float` objects. The array measurement does include the raw numeric payload. That is why the real memory gap becomes dramatic for numeric workloads.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 # Example byte counts below were measured on CPython 3.12.3, 64-bit Linux.
 import sys
 from array import array
@@ -57,14 +57,14 @@ This is the same container-vs-flat distinction discussed in <CardRef id="memory-
 `deque` is designed for that queue shape. The official docs describe appends and pops from either side as approximately `O(1)`, while list left-edge mutation incurs `O(n)` memory movement.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 queue = [1, 2, 3]
 first = queue.pop(0)
 print(first, queue)
 ```
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 from collections import deque
 
 queue = deque([1, 2, 3])
@@ -84,7 +84,7 @@ Do not treat those exact numbers as portable. The stable lesson is the algorithm
 `memoryview` exposes the buffer protocol. It lets you slice and mutate bytes-like storage without allocating a copied sub-buffer.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 buffer = bytearray(b"abcdefgh")
 view = memoryview(buffer)
 
@@ -130,7 +130,7 @@ Use:
 - `memoryview` for packet parsing, protocol frames, and binary slicing without copies
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 from array import array
 
 def save_temperatures(readings, path):

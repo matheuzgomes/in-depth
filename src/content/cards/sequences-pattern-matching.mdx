@@ -1,7 +1,7 @@
 Sequence patterns let you branch on shape first, then bind names. That keeps protocol parsing away from fragile `parts[0]`, `parts[1]` code.
 
 ```python
-# Requires Python 3.10+ [PEP 634]
+# [CURRENT - 3.10-3.14] Requires Python 3.10+ [PEP 634]
 def route(command):
     match command.split():
         case ["move", x, y]:

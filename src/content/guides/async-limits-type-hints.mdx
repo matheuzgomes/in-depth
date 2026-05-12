@@ -11,7 +11,7 @@ Async Python is a concurrency model for **waiting workloads**.
 - it needs accurate protocol types if you want APIs to stay clear under maintenance
 
 ```python
-# Works on Python 3.10+
+# [CURRENT - 3.10-3.14] Works on Python 3.10+
 from collections.abc import AsyncIterator
 import asyncio
 
@@ -35,7 +35,7 @@ That gives the event loop scheduling opportunities between tasks. If those await
 If a coroutine does long CPU work without awaiting, that advantage disappears.
 
 ```python
-# Works on Python 3.7+
+# [OLDER / 3.7-3.8, CURRENT - 3.10-3.14] Works on Python 3.7+
 async def cpu_heavy():
     total = 0
     for i in range(50_000_000):
@@ -67,7 +67,7 @@ There is no general "timeslice the coroutine after N Python instructions" contra
 - accidental `time.sleep(...)` inside `async def`
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 import asyncio
 import time
 
@@ -95,7 +95,7 @@ The main interfaces are:
 For modern Python, prefer the abstract protocol type that matches the boundary you are exposing.
 
 ```python
-# Works on Python 3.10+
+# [CURRENT - 3.10-3.14] Works on Python 3.10+
 from collections.abc import AsyncIterable
 
 async def consume_ids(source: AsyncIterable[int]) -> list[int]:
@@ -107,7 +107,7 @@ This signature is stronger than `source: object` and more reusable than forcing 
 When the function specifically manufactures and returns a native coroutine object, the most useful public annotation is usually still the final awaited result type on the function itself:
 
 ```python
-# Works on Python 3.10+
+# [CURRENT - 3.10-3.14] Works on Python 3.10+
 import asyncio
 
 async def fetch_total() -> int:
@@ -118,7 +118,7 @@ async def fetch_total() -> int:
 Callers see `async def ... -> int` because the annotation describes the value produced when awaited. If you are typing a variable that stores the created coroutine object, that is when `Coroutine[..., T]` or `Awaitable[T]` becomes useful.
 
 ```python
-# Works on Python 3.10+
+# [CURRENT - 3.10-3.14] Works on Python 3.10+
 from collections.abc import Awaitable
 
 async def fetch_total() -> int:

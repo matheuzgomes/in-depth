@@ -3,7 +3,17 @@
 import { useMemo, useState } from "react"
 import type { ContainerComparisonContainer, ContainerComparisonId, ContainerComparisonLabData, ContainerWorkloadId } from "@/types"
 import { T } from "@/lib/tokens"
-import { ExplanationPanel, SimulationCodePanel, SimulationShell, StateCard } from "@/components/ui/simulationShared"
+import {
+  ExplanationPanel,
+  SimulationCodePanel,
+  SimulationGrid,
+  SimulationPillButton,
+  SimulationPillRow,
+  SimulationSection,
+  SimulationSelectableCard,
+  SimulationShell,
+  StateCard,
+} from "@/components/ui/simulationShared"
 
 interface ContainerComparisonLabProps {
   data: ContainerComparisonLabData
@@ -44,33 +54,29 @@ export function ContainerComparisonLab({ data }: ContainerComparisonLabProps) {
       }}
       stepLabel={open ? `Workload: ${workload.label} · Focus: ${container.label}` : undefined}
     >
-      <div style={{ display: "grid", gap: 10, marginBottom: 16 }}>
-        <SelectorRow
-          label="Workload"
-          options={data.workloads.map((item) => ({
-            id: item.id,
-            label: item.label,
-            selected: item.id === selectedWorkload,
-            onSelect: () => setSelectedWorkload(item.id),
-          }))}
-        />
-        <SelectorRow
-          label="Container"
-          options={data.containers.map((item) => ({
-            id: item.id,
-            label: item.label,
-            selected: item.id === selectedContainer,
-            onSelect: () => setSelectedContainer(item.id),
-          }))}
-        />
+      <div style={{ display: "grid", gap: 10 }}>
+        <SimulationSection title="Workload" tone="teal">
+          <SimulationPillRow>
+            {data.workloads.map((item) => (
+              <SimulationPillButton key={item.id} selected={item.id === selectedWorkload} onClick={() => setSelectedWorkload(item.id)}>
+                {item.label}
+              </SimulationPillButton>
+            ))}
+          </SimulationPillRow>
+        </SimulationSection>
+
+        <SimulationSection title="Container" tone="blue">
+          <SimulationPillRow>
+            {data.containers.map((item) => (
+              <SimulationPillButton key={item.id} selected={item.id === selectedContainer} onClick={() => setSelectedContainer(item.id)}>
+                {item.label}
+              </SimulationPillButton>
+            ))}
+          </SimulationPillRow>
+        </SimulationSection>
       </div>
 
-      <div style={{
-        display: "grid",
-        gap: 12,
-        gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-        marginBottom: 16,
-      }}>
+      <SimulationGrid minColumn={220}>
         {data.containers.map((item) => (
           <SummaryCard
             key={item.id}
@@ -80,31 +86,21 @@ export function ContainerComparisonLab({ data }: ContainerComparisonLabProps) {
             onSelect={() => setSelectedContainer(item.id)}
           />
         ))}
-      </div>
+      </SimulationGrid>
 
       <SimulationCodePanel sourceCode={metric.code} activeLine={1} />
 
-      <div style={{
-        display: "grid",
-        gap: 12,
-        gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-        marginBottom: 16,
-      }}>
+      <SimulationGrid minColumn={180}>
         <StateCard label="Complexity / shape" value={metric.complexity} color={CONTAINER_COLORS[container.id]} />
         <StateCard label="Measured local proof" value={metric.measured} color={T.blue} />
         <StateCard label="Workload verdict" value={metric.headline} color={T.amber} />
-      </div>
+      </SimulationGrid>
 
-      <div style={{
-        display: "grid",
-        gap: 12,
-        gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))",
-        marginBottom: 16,
-      }}>
-        <DetailPanel label="Storage model" body={container.storageModel} color={CONTAINER_COLORS[container.id]} />
-        <DetailPanel label="Best when" body={metric.bestWhen} color={T.green} />
-        <DetailPanel label="Bad fit when" body={metric.avoidWhen} color={T.coral} />
-      </div>
+      <SimulationGrid minColumn={210}>
+        <DetailPanel label="Storage model" body={container.storageModel} />
+        <DetailPanel label="Best when" body={metric.bestWhen} />
+        <DetailPanel label="Bad fit when" body={metric.avoidWhen} />
+      </SimulationGrid>
 
       <ExplanationPanel
         title={`${container.label} under ${workload.label.toLowerCase()}`}
@@ -132,42 +128,6 @@ export function ContainerComparisonLab({ data }: ContainerComparisonLabProps) {
   )
 }
 
-function SelectorRow({
-  label,
-  options,
-}: {
-  label: string
-  options: Array<{ id: string; label: string; selected: boolean; onSelect: () => void }>
-}) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-      <div style={{ fontSize: 11.5, color: T.text3, minWidth: 72, textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 800 }}>
-        {label}
-      </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-        {options.map((option) => (
-          <button
-            key={option.id}
-            onClick={option.onSelect}
-            style={{
-              borderRadius: 999,
-              border: `0.5px solid ${option.selected ? `${T.teal.accent}77` : T.border}`,
-              background: option.selected ? T.teal.bg : T.bg2,
-              color: option.selected ? T.teal.fg : T.text2,
-              padding: "7px 11px",
-              fontSize: 11.5,
-              fontWeight: 650,
-              cursor: "pointer",
-            }}
-          >
-            {option.label}
-          </button>
-        ))}
-      </div>
-    </div>
-  )
-}
-
 function SummaryCard({
   container,
   workload,
@@ -182,61 +142,21 @@ function SummaryCard({
   const color = CONTAINER_COLORS[container.id]
   const metric = container.metrics[workload]
 
-  return (
-    <button
-      onClick={onSelect}
-      style={{
-        textAlign: "left",
-        borderRadius: 12,
-        border: `0.5px solid ${selected ? `${color.accent}88` : T.border}`,
-        background: selected ? color.bg : T.bg2,
-        padding: "13px 14px",
-        cursor: "pointer",
-      }}
-    >
-      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8, marginBottom: 8 }}>
-        <div style={{ fontSize: 14, fontWeight: 700, color: selected ? color.fg : T.text1 }}>
-          {container.label}
-        </div>
-        <div style={{ fontSize: 10.5, color: T.text3, letterSpacing: "0.08em", textTransform: "uppercase" }}>
-          {metric.complexity}
-        </div>
-      </div>
-      <div style={{ fontSize: 12, color: T.text2, lineHeight: 1.65, marginBottom: 8 }}>
-        {container.summary}
-      </div>
-      <div style={{ fontSize: 12.5, color: selected ? color.fg : T.text1, fontWeight: 650 }}>
-        {metric.measured}
-      </div>
-      <div style={{ fontSize: 11.5, color: T.text3, lineHeight: 1.65, marginTop: 6 }}>
-        {metric.headline}
-      </div>
-    </button>
-  )
+  return <SimulationSelectableCard title={container.label} body={container.summary} footer={`${metric.measured} - ${metric.headline}`} selected={selected} onClick={onSelect} color={color} eyebrow={metric.complexity} />
 }
 
 function DetailPanel({
   label,
   body,
-  color,
 }: {
   label: string
   body: string
-  color: { bg: string; fg: string; accent: string }
 }) {
   return (
-    <div style={{
-      borderRadius: 12,
-      border: `0.5px solid ${color.accent}44`,
-      background: color.bg,
-      padding: "13px 14px",
-    }}>
-      <div style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: color.fg, marginBottom: 8 }}>
-        {label}
-      </div>
+    <SimulationSection title={label} tone="neutral">
       <div style={{ fontSize: 12.5, color: T.text1, lineHeight: 1.75 }}>
         {body}
       </div>
-    </div>
+    </SimulationSection>
   )
 }

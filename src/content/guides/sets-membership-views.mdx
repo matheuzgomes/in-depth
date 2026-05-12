@@ -7,7 +7,7 @@ Sets are hash tables specialized for uniqueness, membership, and algebra. Dictio
 Use a `set` when the real operation is repeated membership testing or set algebra: union, intersection, difference, subset, or superset.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 blocked = {"root", "admin", "system"}
 
 def allowed(username):
@@ -30,7 +30,7 @@ Those exact times are not portable. The stable lesson is the algorithmic one: li
 Sets are hash tables without associated values. The same hashability rules that govern dict keys govern set elements.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 role = frozenset({"read", "write"})
 permissions = {role: "editor"}
 print(permissions[role])
@@ -44,7 +44,7 @@ Because sets are hash tables, they also reserve significant extra memory to prot
 - `32` to `64` elements: `2264` bytes
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 # Example byte counts below were measured on CPython 3.12.3, 64-bit Linux.
 import sys
 
@@ -60,7 +60,7 @@ That overhead is the price of near-constant-time membership.
 Sets support the expected algebra directly:
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 requested = {"read", "write", "delete"}
 granted = {"read", "write"}
 
@@ -72,7 +72,7 @@ print(requested & granted)
 Operator forms such as `|`, `&`, and `-` on actual `set` objects expect set operands. If the right-hand side is a general iterable, use methods such as `.union()` or `.intersection()`.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 print({"a", "b"}.intersection(["b", "c"]))
 ```
 
@@ -81,7 +81,7 @@ print({"a", "b"}.intersection(["b", "c"]))
 `dict.keys()`, `dict.items()`, and `dict.values()` return dynamic view objects over the underlying dictionary. They are not materialized lists, and they update when the dictionary changes.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 data = {"a": 1}
 keys = data.keys()
 data["b"] = 2
@@ -91,7 +91,7 @@ print(list(keys))
 Key views are set-like because keys are unique and hashable. Item views are also set-like when their `(key, value)` pairs are hashable. Values views are not set-like because values are not generally unique.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 expected = {"id", "email", "role"}
 payload = {"id": 1, "email": "a@example.com", "debug": True}
 
@@ -104,7 +104,7 @@ print(missing, extra)
 One subtle but important distinction from ordinary sets: the official docs note that set-like dictionary views accept **any iterable** as the other operand for set operators. That makes view algebra surprisingly ergonomic.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 d = {"a": 1, "b": 2}
 print(d.keys() | ["b", "c", "c"])
 ```
@@ -118,7 +118,7 @@ Set types and dictionary views are stable Python 3 features. Dictionary insertio
 Set iteration order is not a sorting contract. It can vary across runs and table states. If output order matters, sort explicitly.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 names = {"zoe", "ana", "bo"}
 print(sorted(names))
 ```

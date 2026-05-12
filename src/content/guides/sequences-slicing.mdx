@@ -7,7 +7,7 @@ Slicing is Python's compact notation for half-open ranges over sequences. It is 
 Python slices use half-open intervals: `seq[start:stop]` includes `start` and excludes `stop`. That choice makes boundaries composable and length arithmetic simple.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 items = list(range(10))
 
 middle = items[2:5]
@@ -24,7 +24,7 @@ The excluded `stop` is why `seq[:x]` and `seq[x:]` partition a sequence without 
 Negative indexes count from the end. Missing bounds mean "use the natural boundary." A negative step reverses traversal direction.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 path = "/srv/app/events.log"
 
 print(path[-10:])     # events.log
@@ -39,7 +39,7 @@ print(path[::-2])     # go.tnv/pa/r
 The expression `seq[a:b:c]` creates a `slice(a, b, c)` object and passes it through subscription. For built-in sequences, CPython dispatches to optimized C implementations. For user-defined containers, the object passed to `__getitem__` is literally a `slice` instance.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 class AuditList:
     def __init__(self, values):
         self._values = list(values)
@@ -55,7 +55,7 @@ print(data[1:3])      # slice(1, 3, None), then [20, 30]
 Normal slicing of built-in sequences creates a new object. For lists, that new list is a shallow copy of the referenced range: the outer container is new, but the element references are reused.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 rows = [[1], [2]]
 copy = rows[:]
 
@@ -67,7 +67,7 @@ print(rows)           # [[1, 99], [2]]
 That means the time and memory cost of list slicing are proportional to the slice length, not constant. On this machine, the container-only size difference is visible immediately:
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 # Example byte counts below were measured on CPython 3.12.3, 64-bit Linux.
 import sys
 
@@ -83,7 +83,7 @@ The 100-element slice allocates a brand new list object large enough to hold 100
 The full slice form is `seq[start:stop:step]`. Python normalizes weird or out-of-range values using the semantics exposed by `slice.indices(length)`.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 window = slice(-5, None, 2)
 print(window.indices(12))  # normalized start, stop, step
 ```
@@ -94,7 +94,7 @@ Extended slicing changes two things:
 - assignment becomes stricter
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 nums = list(range(8))
 
 nums[2:5] = [20, 30]
@@ -117,7 +117,7 @@ The exact byte counts shown here are CPython 3.12.3, 64-bit measurements taken l
 Do not assume slices are views. List, tuple, and string slices allocate new objects. If you need zero-copy behavior over binary data, use `memoryview`, not slicing on `bytes` or `bytearray`.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 data = b"abcdefgh"
 print(data[2:5])  # b'cde' -> a new bytes object
 ```
@@ -131,7 +131,7 @@ print(data[2:5])  # b'cde' -> a new bytes object
 Use named `slice` objects when the indexes have domain meaning instead of algorithmic meaning.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 invoice = "2026-05-10CUST042PAID "
 
 DATE = slice(0, 10)

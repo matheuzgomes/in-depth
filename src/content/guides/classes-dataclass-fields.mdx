@@ -5,7 +5,7 @@
 Use `field()` when a plain default is not enough: mutable defaults, hidden constructor fields, metadata, comparison control, or factories.
 
 ```python
-# Works on Python 3.7+
+# [OLDER / 3.9, CURRENT - 3.10-3.14] Works on Python 3.9+ [PEP 585]
 from dataclasses import dataclass, field
 
 @dataclass
@@ -26,7 +26,7 @@ Dataclasses inspect class annotations and synthesize methods such as:
 - optionally hash behavior depending on `eq`, `frozen`, and `unsafe_hash`
 
 ```python
-# Works on Python 3.7+
+# [OLDER / 3.7-3.8, CURRENT - 3.10-3.14] Works on Python 3.7+
 from dataclasses import dataclass
 
 @dataclass(frozen=True, order=True)
@@ -52,7 +52,7 @@ Measured locally on CPython 3.12.3, 64-bit Linux for a simple two-field dataclas
 - slotted dataclass instance: `48` bytes and no instance `__dict__`
 
 ```python
-# Requires Python 3.10+
+# [CURRENT - 3.10-3.14] Requires Python 3.10+
 # Example byte counts below were measured on CPython 3.12.3, 64-bit Linux.
 import sys
 from dataclasses import dataclass
@@ -81,7 +81,7 @@ This is a CPython memory-layout concern, not a language guarantee, but it is one
 Dataclasses were added in Python 3.7 [PEP 557]. `slots=True` was added in Python 3.10. `weakref_slot=True` was added in Python 3.11. Current project guidance targets Python 3.10-3.14. Python 3.9 and below are End-of-Life.
 
 ```python
-# Requires Python 3.10+
+# [CURRENT - 3.10-3.14] Requires Python 3.10+
 from dataclasses import dataclass
 
 @dataclass(slots=True)
@@ -93,7 +93,7 @@ class Point:
 Dataclasses also generate `__match_args__` by default, which makes them participate naturally in structural pattern matching.
 
 ```python
-# Requires Python 3.10+
+# [CURRENT - 3.10-3.14] Requires Python 3.10+
 from dataclasses import dataclass
 
 @dataclass
@@ -109,7 +109,7 @@ print(Point.__match_args__)
 `ClassVar` marks class attributes that are not dataclass instance fields. `InitVar` creates an initialization-only parameter that is passed to `__post_init__` but not stored as a field.
 
 ```python
-# Works on Python 3.7+
+# [OLDER / 3.7-3.8, CURRENT - 3.10-3.14] Works on Python 3.7+
 from dataclasses import InitVar, dataclass, field
 from typing import ClassVar
 
@@ -146,7 +146,7 @@ Use:
 - `field(init=False)` for derived stored fields
 
 ```python
-# Works on Python 3.7+
+# [OLDER / 3.7-3.8, CURRENT - 3.10-3.14] Works on Python 3.7+
 from dataclasses import dataclass
 
 @dataclass(frozen=True)

@@ -5,7 +5,7 @@ The recurring dict pattern is: find the bucket for a key, create it if missing, 
 Use `dict.setdefault()` for a local one-off "get or create" update. Use `collections.defaultdict(factory)` when the whole mapping has one stable missing-key policy.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 index = {}
 pairs = [("python", 3), ("dict", 8), ("python", 14)]
 
@@ -25,7 +25,7 @@ print(index)
 The subtle part is that the `default` expression is still evaluated **before** the call, even if the key is already present.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 def make_default():
     print("building default")
     return []
@@ -38,7 +38,7 @@ print(data)
 That prints `building default` even though `"x"` already exists. This is the main reason `defaultdict` is often better for repeated grouping: the factory is only called when a missing key is actually accessed.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 from collections import defaultdict
 
 index = defaultdict(list)
@@ -53,7 +53,7 @@ print(dict(index))
 This common spelling spreads one idea across multiple dict operations:
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 index = {}
 
 for word, location in pairs:
@@ -67,7 +67,7 @@ It is sometimes the right choice, especially when missing-key creation needs log
 The older `get`-then-store pattern is especially noisy because it tends to perform separate logical read and write steps:
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 occurrences = index.get(word, [])
 occurrences.append(location)
 index[word] = occurrences
@@ -84,7 +84,7 @@ Dict insertion order is guaranteed in Python 3.7+, so grouped output retains fir
 Do not reuse one mutable object as the default across unrelated keys unless shared state is the goal.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 shared = []
 data = {}
 
@@ -110,7 +110,7 @@ Use:
 - explicit `if key not in mapping` when missing-key creation has extra business logic
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 from collections import defaultdict
 
 def build_index(rows):

@@ -5,7 +5,7 @@ Mutable default arguments are shared state stored on the function object. The bu
 Do not use `[]`, `{}`, or other mutable objects as defaults for per-call state. Use `None` plus an inside-the-function allocation, or use a unique sentinel when `None` is itself meaningful.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 class Bus:
     def __init__(self, passengers=None):
         self.passengers = list(passengers) if passengers is not None else []
@@ -19,7 +19,7 @@ class Bus:
 Default values are stored on the function object in `__defaults__` and reused every time the caller omits that argument.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 def append_item(value, bucket=[]):
     bucket.append(value)
     return bucket
@@ -42,7 +42,7 @@ The one-time default-evaluation rule is stable Python 3 behavior and documented 
 `None` is only a good sentinel if `None` is not a meaningful caller value. Otherwise create a dedicated object and compare with `is`.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 _missing = object()
 
 def configure(value=_missing):
@@ -56,7 +56,7 @@ def configure(value=_missing):
 If your constructor receives caller-owned mutable data, snapshot it when shared mutation is not intended.
 
 ```python
-# Works on Python 3.x
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 class Team:
     def __init__(self, members=None):
         self.members = list(members) if members is not None else []
@@ -76,7 +76,7 @@ print(team.members)  # ['Ana']
 For dataclasses, use `field(default_factory=...)` instead of a mutable literal. That moves allocation to instance creation time, not class definition time.
 
 ```python
-# Works on Python 3.7+
+# [OLDER / 3.9, CURRENT - 3.10-3.14] Works on Python 3.9+ [PEP 585]
 from dataclasses import dataclass, field
 
 @dataclass
