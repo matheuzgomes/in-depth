@@ -2286,6 +2286,9 @@ pre {
   width: 72px;
   height: 72px;
   flex: 0 0 72px;
+  position: relative;
+  top: -12px;
+  
 }
 
 .whiteboard-title-block {
