@@ -116,6 +116,11 @@ export function RoughVisualDiagram({ topic }: { topic: WhiteboardTopic }) {
       }))
       svg.appendChild(titleGroup)
 
+      if (topic.visualKind === "slice-window") {
+        renderSliceWindowDiagram(rc, svg)
+        return
+      }
+
       definition.elements.forEach((element, index) => {
         const node = renderElement(rc, element, index)
         if (!node) return
@@ -131,7 +136,7 @@ export function RoughVisualDiagram({ topic }: { topic: WhiteboardTopic }) {
     return () => {
       cancelled = true
     }
-  }, [definition, topic.title])
+  }, [definition, topic.title, topic.visualKind])
 
   return <svg ref={svgRef} viewBox="0 0 620 300" className="whiteboard-visual-svg" aria-hidden="true" />
 }
@@ -233,6 +238,163 @@ function createText(x: number, y: number, text: string, size: number, fill: stri
   node.setAttribute("font-family", family)
   node.textContent = text
   return node
+}
+
+function createAnchoredText(
+  x: number,
+  y: number,
+  text: string,
+  size: number,
+  fill: string,
+  family = "var(--font-board-body)",
+  anchor: "start" | "middle" | "end" = "start",
+) {
+  const node = createText(x, y, text, size, fill, family)
+  node.setAttribute("text-anchor", anchor)
+  return node
+}
+
+function appendNodes(svg: SVGSVGElement, nodes: SVGElement | SVGElement[]) {
+  if (Array.isArray(nodes)) {
+    nodes.forEach((node) => svg.appendChild(node))
+    return
+  }
+  svg.appendChild(nodes)
+}
+
+function createArrowHead(
+  rc: ReturnType<NonNullable<(typeof import("roughjs"))["default"]>["svg"]>,
+  x: number,
+  y: number,
+  direction: "down" | "right-down",
+  color: string,
+  seed: number,
+) {
+  const path = direction === "down"
+    ? `M ${x - 8} ${y - 13} L ${x} ${y} L ${x + 8} ${y - 13}`
+    : `M ${x - 15} ${y - 5} L ${x} ${y} L ${x - 5} ${y - 15}`
+
+  return rc.path(path, {
+    seed,
+    stroke: color,
+    strokeWidth: 2.4,
+    fill: "none",
+    roughness: 1.1,
+    bowing: 1.1,
+  })
+}
+
+function renderSliceWindowDiagram(
+  rc: ReturnType<NonNullable<(typeof import("roughjs"))["default"]>["svg"]>,
+  svg: SVGSVGElement,
+) {
+  const sourceX = 58
+  const sourceY = 104
+  const cellW = 66
+  const cellH = 44
+  const indexY = sourceY + cellH + 18
+  const values = ["10", "20", "30", "40", "50", "60"]
+  const selected = new Set([2, 3, 4])
+
+  appendNodes(svg, createAnchoredText(58, 80, "source list", 18, TITLE_COLOR, "var(--font-board-display)"))
+  appendNodes(svg, createAnchoredText(494, 80, "items[2:5]", 24, ACCENT_COLOR, "var(--font-board-display)", "middle"))
+
+  appendNodes(svg, rc.rectangle(sourceX - 12, sourceY - 18, values.length * cellW + 24, cellH + 50, {
+    seed: 211,
+    stroke: TITLE_COLOR,
+    strokeWidth: 2.1,
+    fill: "rgba(255, 255, 255, 0)",
+    roughness: 1.25,
+    bowing: 1.2,
+  }))
+
+  values.forEach((value, index) => {
+    const x = sourceX + index * cellW
+    appendNodes(svg, rc.rectangle(x, sourceY, cellW, cellH, {
+      seed: 220 + index,
+      stroke: selected.has(index) ? ACCENT_COLOR : TITLE_COLOR,
+      strokeWidth: selected.has(index) ? 2.7 : 1.8,
+      fill: selected.has(index) ? "rgba(255, 241, 118, 0.34)" : "rgba(255, 255, 255, 0)",
+      fillStyle: "hachure",
+      hachureAngle: -12,
+      hachureGap: 7,
+      roughness: 1.1,
+      bowing: 1.05,
+    }))
+    appendNodes(svg, createAnchoredText(x + cellW / 2, sourceY + 30, value, 17, MARKER_COLORS.black, "var(--font-board-body)", "middle"))
+    appendNodes(svg, createAnchoredText(x, indexY, String(index), 13, TITLE_COLOR, "var(--font-board-body)", "middle"))
+  })
+
+  appendNodes(svg, createAnchoredText(sourceX + values.length * cellW, indexY, String(values.length), 13, TITLE_COLOR, "var(--font-board-body)", "middle"))
+  appendNodes(svg, createAnchoredText(sourceX, sourceY + cellH + 43, "boundary indexes", 13, TITLE_COLOR, "var(--font-board-body)"))
+
+  const startX = sourceX + 2 * cellW
+  const stopX = sourceX + 5 * cellW
+  const arrowY = sourceY - 34
+
+  appendNodes(svg, rc.path(`M ${startX} ${arrowY} C ${startX - 22} ${arrowY + 16}, ${startX - 6} ${sourceY - 10}, ${startX} ${sourceY}`, {
+    seed: 260,
+    stroke: GOOD_COLOR,
+    strokeWidth: 2.3,
+    fill: "none",
+    roughness: 1.25,
+    bowing: 1.2,
+  }))
+  appendNodes(svg, createArrowHead(rc, startX, sourceY, "down", GOOD_COLOR, 262))
+  appendNodes(svg, createAnchoredText(startX - 14, arrowY - 6, "start = 2", 17, GOOD_COLOR, "var(--font-board-display)", "middle"))
+
+  appendNodes(svg, rc.path(`M ${stopX} ${arrowY} C ${stopX + 24} ${arrowY + 16}, ${stopX + 6} ${sourceY - 10}, ${stopX} ${sourceY}`, {
+    seed: 261,
+    stroke: ACCENT_COLOR,
+    strokeWidth: 2.3,
+    fill: "none",
+    roughness: 1.25,
+    bowing: 1.2,
+  }))
+  appendNodes(svg, createArrowHead(rc, stopX, sourceY, "down", ACCENT_COLOR, 263))
+  appendNodes(svg, createAnchoredText(stopX + 28, arrowY - 6, "stop = 5", 17, ACCENT_COLOR, "var(--font-board-display)", "middle"))
+
+  appendNodes(svg, rc.rectangle(startX + 2, sourceY - 7, stopX - startX - 4, cellH + 14, {
+    seed: 271,
+    stroke: ACCENT_COLOR,
+    strokeWidth: 2.8,
+    fill: "none",
+    roughness: 1.5,
+    bowing: 1.35,
+  }))
+
+  appendNodes(svg, createAnchoredText(498, sourceY + 22, "stop boundary", 14, ACCENT_COLOR, "var(--font-board-display)"))
+  appendNodes(svg, createAnchoredText(498, sourceY + 41, "not copied", 14, ACCENT_COLOR, "var(--font-board-display)"))
+  appendNodes(svg, createAnchoredText(58, sourceY + cellH + 66, "copied: positions 2-4", 16, ACCENT_COLOR, "var(--font-board-display)"))
+
+  const resultX = 176
+  const resultY = 238
+  appendNodes(svg, rc.path(`M ${startX + 94} ${sourceY + cellH + 34} C ${startX + 118} 208, ${resultX + 110} 208, ${resultX + 136} ${resultY - 10}`, {
+    seed: 280,
+    stroke: GOOD_COLOR,
+    strokeWidth: 2.5,
+    fill: "none",
+    roughness: 1.2,
+    bowing: 1.3,
+  }))
+  appendNodes(svg, createArrowHead(rc, resultX + 136, resultY - 10, "right-down", GOOD_COLOR, 281))
+  appendNodes(svg, createAnchoredText(462, resultY + 26, "new list object", 18, GOOD_COLOR, "var(--font-board-display)", "middle"))
+
+  ;["30", "40", "50"].forEach((value, index) => {
+    const x = resultX + index * cellW
+    appendNodes(svg, rc.rectangle(x, resultY, cellW, 38, {
+      seed: 290 + index,
+      stroke: GOOD_COLOR,
+      strokeWidth: 2.1,
+      fill: "rgba(209, 250, 229, 0.32)",
+      fillStyle: "hachure",
+      hachureAngle: 18,
+      hachureGap: 7,
+      roughness: 1.1,
+      bowing: 1.05,
+    }))
+    appendNodes(svg, createAnchoredText(x + cellW / 2, resultY + 25, value, 16, MARKER_COLORS.black, "var(--font-board-body)", "middle"))
+  })
 }
 
 function getDiagramDefinition(kind: WhiteboardVisualKind): DiagramDefinition {
