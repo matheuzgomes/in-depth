@@ -30,6 +30,42 @@ const MARKER_COLORS = {
   purple: "#6c3483",
 } as const
 
+const PYTHON_STICKY_NOTES = [
+  "A slice copies when the left side is a list. Nice syntax, real allocation.",
+  "If a default value is mutable, pause before you ship it.",
+  "A dict lookup is fast until your key's hash story gets weird.",
+  "Async only helps if the code gives the loop a place to breathe.",
+  "Prefer boring names. Future you debugs with tired eyes.",
+  "Tuples say fixed shape. Lists say this may grow.",
+  "If order matters, say so in the type you choose.",
+  "Log the decision point, not every footstep.",
+  "A set is for questions like: have I seen this before?",
+  "Bytecode explains shape. Measurements still decide.",
+  "Dataclasses generate methods, not judgment.",
+  "The GIL is not your lock. Use a real one for shared state.",
+]
+
+function pickTocNote() {
+  const index = Math.floor(Math.random() * PYTHON_STICKY_NOTES.length)
+  return PYTHON_STICKY_NOTES[index]
+}
+
+function buildTopicNotes(topic: WhiteboardTopic) {
+  return [
+    topic.reminder,
+    topic.takeaways[0],
+    topic.howItWorks[0],
+    topic.whenToUseIt[0],
+    topic.boardIntro,
+  ].filter(Boolean)
+}
+
+function pickTopicNote(topic: WhiteboardTopic, noteTurn: number) {
+  const notes = buildTopicNotes(topic)
+  const index = noteTurn % notes.length
+  return notes[index] ?? topic.reminder
+}
+
 interface WhiteboardExperienceProps {
   initialTopicId: string
   initialView: WhiteboardView
@@ -50,6 +86,8 @@ export function WhiteboardExperience({
   const [visualOpen, setVisualOpen] = useState(initialView === "visual")
   const [tocOpen, setTocOpen] = useState(false)
   const [sidePanelOpen, setSidePanelOpen] = useState(false)
+  const [topicNoteTurn, setTopicNoteTurn] = useState(0)
+  const [tocNote] = useState(() => pickTocNote())
   const [openSectionIds, setOpenSectionIds] = useState<Set<string>>(() => new Set(WHITEBOARD_SECTIONS.map((section) => section.id)))
   const [loadedGuides, setLoadedGuides] = useState<LoadedGuideMap>({})
   const [guideLoadState, setGuideLoadState] = useState<GuideLoadState>({})
@@ -76,6 +114,7 @@ export function WhiteboardExperience({
   }, [activeTopic])
   const upcomingTopics = useMemo(() => getUpcomingTopics(activeTopic?.id ?? "", 3), [activeTopic])
   const benchmarkTopic = useMemo(() => getWhiteboardBenchmarkTopic(activeTopic.id), [activeTopic.id])
+  const quickNote = useMemo(() => pickTopicNote(activeTopic, topicNoteTurn), [activeTopic, topicNoteTurn])
   const mobilePanelLabel = benchmarkTopic ? "Benchmarks" : "Notes"
 
   const ensureGuideLoaded = useCallback(async (topicId: string) => {
@@ -118,7 +157,12 @@ export function WhiteboardExperience({
     nextVisualOpen: boolean,
     historyMode: "push" | "replace" = "push",
   ) => {
-    setActiveTopicId(topicId)
+    setActiveTopicId((currentTopicId) => {
+      if (currentTopicId !== topicId) {
+        setTopicNoteTurn((current) => current + 1)
+      }
+      return topicId
+    })
     setContentView(nextContentView)
     setVisualOpen(nextVisualOpen)
     syncBrowserUrl(topicId, nextVisualOpen ? "visual" : nextContentView, historyMode)
@@ -150,7 +194,12 @@ export function WhiteboardExperience({
       const params = new URLSearchParams(window.location.search)
       const nextTopicId = normalizeTopicId(params.get("topic"))
       const nextView = normalizeWhiteboardView(params.get("view"))
-      setActiveTopicId(nextTopicId)
+      setActiveTopicId((currentTopicId) => {
+        if (currentTopicId !== nextTopicId) {
+          setTopicNoteTurn((current) => current + 1)
+        }
+        return nextTopicId
+      })
       setVisualOpen(nextView === "visual")
       setContentView(nextView === "guide" ? "guide" : "overview")
       if (nextView === "guide") {
@@ -259,8 +308,8 @@ export function WhiteboardExperience({
                   transition={{ duration: 0.18, ease: "easeOut" }}
                 >
                   <div className="whiteboard-sticky-tape" />
-                  <strong>Don&apos;t forget!</strong>
-                  <p>{activeTopic.reminder}</p>
+                  <strong>Quick note</strong>
+                  <p>{quickNote}</p>
                   <span className="whiteboard-smiley">:)</span>
                 </motion.div>
               </div>
@@ -331,8 +380,7 @@ export function WhiteboardExperience({
 
                   <div className="whiteboard-protip-note" aria-hidden="true">
                     <div className="whiteboard-sticky-tape" />
-                    <strong>Pro Tip:</strong>
-                    <span>The TOC scrolls inside its own box, so the rest of the board stays stable.</span>
+                    <span>{tocNote}</span>
                   </div>
                 </aside>
 
