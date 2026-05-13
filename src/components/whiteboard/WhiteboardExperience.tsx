@@ -6,6 +6,7 @@ import { AnimatePresence, motion } from "framer-motion"
 import { Menu, Search, X } from "lucide-react"
 import { NavContext } from "@/components/navigation/NavContext"
 import { RoughPythonMark } from "@/components/whiteboard/RoughPythonMark"
+import { RoughTitle } from "@/components/whiteboard/RoughTitle"
 import { RoughVisualDiagram } from "@/components/whiteboard/RoughVisualDiagram"
 import { loadGuideComponent, preloadGuide } from "@/data/guideRegistry"
 import { WHITEBOARD_BENCHMARKS, getWhiteboardBenchmarkTopic, type WhiteboardBenchmarkPreset, type WhiteboardBenchmarkTopic } from "@/data/whiteboardBenchmarks"
@@ -296,8 +297,7 @@ export function WhiteboardExperience({
                 </div>
 
                 <div className="whiteboard-title-block">
-                  <h1>Python in Depth</h1>
-                  <Squiggle className="whiteboard-title-squiggle" color={MARKER_COLORS.navy} />
+                  <RoughTitle />
                   <p>An interactive engineering reference for Python internals</p>
                 </div>
 
