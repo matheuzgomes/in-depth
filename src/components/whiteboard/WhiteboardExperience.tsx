@@ -6,7 +6,6 @@ import { AnimatePresence, motion } from "framer-motion"
 import { Menu, Search, X } from "lucide-react"
 import { NavContext } from "@/components/navigation/NavContext"
 import { RoughPythonMark } from "@/components/whiteboard/RoughPythonMark"
-import { RoughTitle } from "@/components/whiteboard/RoughTitle"
 import { RoughVisualDiagram } from "@/components/whiteboard/RoughVisualDiagram"
 import { loadGuideComponent, preloadGuide } from "@/data/guideRegistry"
 import { WHITEBOARD_BENCHMARKS, getWhiteboardBenchmarkTopic, type WhiteboardBenchmarkPreset, type WhiteboardBenchmarkTopic } from "@/data/whiteboardBenchmarks"
@@ -88,7 +87,10 @@ export function WhiteboardExperience({
   const [tocOpen, setTocOpen] = useState(false)
   const [sidePanelOpen, setSidePanelOpen] = useState(false)
   const [topicNoteTurn, setTopicNoteTurn] = useState(0)
+  const [mounted, setMounted] = useState(false)
   const [tocNote] = useState(() => pickTocNote())
+
+  useEffect(() => { setMounted(true) }, [])
   const [openSectionIds, setOpenSectionIds] = useState<Set<string>>(() => new Set(WHITEBOARD_SECTIONS.map((section) => section.id)))
   const [loadedGuides, setLoadedGuides] = useState<LoadedGuideMap>({})
   const [guideLoadState, setGuideLoadState] = useState<GuideLoadState>({})
@@ -297,7 +299,10 @@ export function WhiteboardExperience({
                 </div>
 
                 <div className="whiteboard-title-block">
-                  <RoughTitle />
+                  <div className="whiteboard-content">
+                    <h1>Python in Depth</h1>
+                    <Squiggle className="whiteboard-title-squiggle" color={MARKER_COLORS.navy} />
+                  </div>
                   <p>An interactive engineering reference for Python internals</p>
                 </div>
 
@@ -380,7 +385,7 @@ export function WhiteboardExperience({
 
                   <div className="whiteboard-protip-note" aria-hidden="true">
                     <div className="whiteboard-sticky-tape" />
-                    <span>{tocNote}</span>
+                    <span>{mounted ? tocNote : ""}</span>
                   </div>
                 </aside>
 
@@ -756,7 +761,7 @@ function LineBenchmarkChart({ preset }: { preset: WhiteboardBenchmarkPreset }) {
   return (
     <div className="whiteboard-chart-card whiteboard-chart-card--line">
       <div className="whiteboard-chart-title">{preset.chartTitle}</div>
-      <svg viewBox={`0 0 ${width} ${height}`} className="whiteboard-chart-svg" aria-hidden="true">
+      <svg viewBox={`0 0 ${width} ${height}`} width={width} height={height} className="whiteboard-chart-svg" aria-hidden="true">
         <defs>
           <clipPath id={clipId}>
             <rect x={padding.left} y={padding.top} width={plotWidth} height={plotHeight} />
@@ -824,7 +829,7 @@ function BarBenchmarkChart({ preset }: { preset: WhiteboardBenchmarkPreset }) {
   return (
     <div className="whiteboard-chart-card whiteboard-chart-card--bar">
       <div className="whiteboard-chart-title">{preset.chartTitle}</div>
-      <svg viewBox={`0 0 ${width} ${height}`} className="whiteboard-chart-svg" aria-hidden="true">
+      <svg viewBox={`0 0 ${width} ${height}`} width={width} height={height} className="whiteboard-chart-svg" aria-hidden="true">
         <defs>
           <clipPath id={clipId}>
             <rect x={padding.left} y={padding.top} width={plotWidth} height={plotHeight} />
@@ -891,7 +896,7 @@ function LollipopBenchmarkChart({ preset }: { preset: WhiteboardBenchmarkPreset 
   return (
     <div className="whiteboard-chart-card whiteboard-chart-card--lollipop">
       <div className="whiteboard-chart-title">{preset.chartTitle}</div>
-      <svg viewBox={`0 0 ${width} ${height}`} className="whiteboard-chart-svg" aria-hidden="true">
+      <svg viewBox={`0 0 ${width} ${height}`} width={width} height={height} className="whiteboard-chart-svg" aria-hidden="true">
         <defs>
           <clipPath id={clipId}>
             <rect x={padding.left} y={padding.top} width={plotWidth} height={plotHeight} />
@@ -975,7 +980,7 @@ function ChartAxes({
         const ratio = tick / Math.max(yTicks[yTicks.length - 1], 1)
         const y = padding.top + plotHeight - ratio * plotHeight
         return (
-          <text key={`tick-${tick}`} x={6} y={y + 4} className="whiteboard-chart-axis">
+          <text key={`tick-${tick}`} x={padding.left - 4} y={y + 4} textAnchor="end" className="whiteboard-chart-axis">
             {formatChartTick(tick, yUnit)}
           </text>
         )

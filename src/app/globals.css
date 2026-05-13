@@ -2288,7 +2288,7 @@ pre {
   flex: 0 0 72px;
   position: relative;
   top: -12px;
-  
+
 }
 
 .whiteboard-title-block {
@@ -2312,10 +2312,17 @@ pre {
   color: #334;
 }
 
+.whiteboard-content {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+}
+
 .whiteboard-title-squiggle {
-  width: 100%;
+  width: min(100%, 520px);
   height: 18px;
   margin-top: 2px;
+  justify-self: center;
 }
 
 .whiteboard-mode-panel {
@@ -2547,6 +2554,15 @@ pre {
   opacity: 1;
 }
 
+.whiteboard-topic-number {
+  text-align: right;
+}
+
+.whiteboard-topic-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .whiteboard-topic-arrow {
   padding-right: 4px;
 }
@@ -2633,7 +2649,7 @@ pre {
 .whiteboard-topic-kicker {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-start;
+  align-items: baseline;
   gap: 8px;
 }
 
@@ -2847,11 +2863,14 @@ pre {
 .whiteboard-chart-card {
   display: grid;
   gap: 8px;
+  overflow: hidden;
 }
 
 .whiteboard-chart-svg {
   width: 100%;
+  max-width: 100%;
   height: auto;
+  min-width: 0;
 }
 
 .whiteboard-chart-axis {
@@ -2873,6 +2892,14 @@ pre {
   display: flex;
   align-items: center;
   gap: 4px;
+}
+
+.whiteboard-legend-swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  flex: 0 0 auto;
 }
 
 .whiteboard-control-block,
@@ -4239,6 +4266,7 @@ pre {
 
 .whiteboard-measured-stack {
   gap: 10px;
+  min-width: 0;
 }
 
 .whiteboard-measured-stack .whiteboard-sim-title {
