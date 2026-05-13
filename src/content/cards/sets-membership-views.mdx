@@ -9,8 +9,8 @@ payload = {"id": 1, "debug": True}
 missing = required_keys - payload.keys()
 unexpected = payload.keys() - allowed_keys
 
-if missing:
-    raise ValueError(missing)
+print("missing:", missing)
+print("unexpected:", unexpected)
 ```
 
 <Callout type="info">

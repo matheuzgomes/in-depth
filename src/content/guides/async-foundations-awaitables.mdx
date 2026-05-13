@@ -159,6 +159,7 @@ async def hello():
 
 result = hello()
 print(result)
+result.close()
 ```
 
 Another common mistake is treating `await` as if it always means "run in parallel." It does not. It means "suspend here until this awaitable completes."

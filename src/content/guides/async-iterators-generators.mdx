@@ -32,6 +32,11 @@ An async iterable is an object that supports asynchronous iteration. The consume
 # [OLDER / 3.6-3.9, CURRENT - 3.10-3.14] Requires Python 3.6+ [PEP 492]
 import asyncio
 
+async def ticker():
+    for value in (1, 2, 3):
+        await asyncio.sleep(0.1)
+        yield value
+
 async def main():
     async for item in ticker():
         print(item)
@@ -80,6 +85,11 @@ Async comprehensions and async generator expressions let you write compact trans
 ```python
 # [OLDER / 3.6-3.9, CURRENT - 3.10-3.14] Requires Python 3.6+ [PEP 530]
 import asyncio
+
+async def ticker():
+    for value in (1, 2, 3):
+        await asyncio.sleep(0.1)
+        yield value
 
 async def collect_even():
     return [value async for value in ticker() if value % 2 == 0]

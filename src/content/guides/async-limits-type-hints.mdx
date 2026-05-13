@@ -125,6 +125,7 @@ async def fetch_total() -> int:
     return 3
 
 pending: Awaitable[int] = fetch_total()
+pending.close()  # native coroutine object in this example
 ```
 
 This connects directly to <CardRef id="language-type-hints" />: accept the most general correct input protocol, and return the type your caller actually needs.

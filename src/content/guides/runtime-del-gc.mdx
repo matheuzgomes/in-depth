@@ -80,7 +80,12 @@ If cleanup affects correctness, you need deterministic cleanup:
 
 ```python
 # [CURRENT - 3.10-3.14] Works on Python 3.x
-with open("events.log", encoding="utf-8") as fp:
+from io import StringIO
+
+def process(line):
+    print(line.strip().upper())
+
+with StringIO("start\nstop\n") as fp:
     for line in fp:
         process(line)
 ```

@@ -33,6 +33,12 @@ That `isEnabledFor` gate is why `%`-style argument logging matters. With:
 
 ```python
 # [CURRENT - 3.10-3.14] Works on Python 3.x
+import logging
+
+log = logging.getLogger(__name__)
+row_count = 250
+source = "orders.csv"
+
 log.debug("loaded %s rows from %s", row_count, source)
 ```
 
@@ -44,11 +50,26 @@ Use `logger.exception()` inside an exception handler to include traceback inform
 
 ```python
 # [CURRENT - 3.10-3.14] Works on Python 3.x
+import logging
+
+class PaymentError(Exception):
+    pass
+
+class Order:
+    def __init__(self, order_id):
+        self.id = order_id
+
+def process_order(order):
+    raise PaymentError("card declined")
+
+log = logging.getLogger(__name__)
+order = Order(order_id="A-1042")
+
 try:
     process_order(order)
 except PaymentError:
     log.exception("payment processing failed", extra={"order_id": order.id})
-    raise
+    print("surface domain failure to caller")
 ```
 
 The `extra` mapping adds attributes to the `LogRecord`. That is powerful, but it also means names can collide with standard record attributes if you choose them carelessly.
@@ -65,6 +86,16 @@ Never log secrets, raw tokens, passwords, full request bodies, or unnecessary pe
 
 ```python
 # [CURRENT - 3.10-3.14] Works on Python 3.x
+import logging
+
+class Order:
+    def __init__(self, order_id, customer_id):
+        self.id = order_id
+        self.customer_id = customer_id
+
+log = logging.getLogger(__name__)
+order = Order(order_id="A-1042", customer_id="C-88")
+
 safe = {
     "order_id": order.id,
     "customer_id": order.customer_id,

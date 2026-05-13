@@ -1,6 +1,7 @@
 Slices are half-open by design: `stop` is excluded, lengths are easy to compute, and adjacent ranges line up without off-by-one glue.
 
 ```python
+# [CURRENT - 3.10-3.14] Works on Python 3.x
 record = "SKU-0012:BR:active"
 sku = slice(0, 8)
 country = slice(9, 11)

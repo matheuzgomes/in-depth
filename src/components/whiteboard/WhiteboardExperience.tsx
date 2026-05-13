@@ -1,7 +1,7 @@
 "use client"
 
 import type { ComponentType, ReactNode } from "react"
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react"
 import { AnimatePresence, motion } from "framer-motion"
 import { Menu, Search, X } from "lucide-react"
 import { NavContext } from "@/components/navigation/NavContext"
@@ -645,12 +645,14 @@ function MeasuredNotebookPanel({ topic }: { topic: WhiteboardBenchmarkTopic }) {
 
       <div className="whiteboard-metrics-block">
         <div className="whiteboard-control-header">METRICS</div>
-        {preset.metrics.map((metric) => (
-          <div key={metric.label} className="whiteboard-metric-row whiteboard-metric-row--static">
-            <span>{metric.label}</span>
-            <strong>{metric.value}</strong>
-          </div>
-        ))}
+        <div className="whiteboard-metric-card-grid">
+          {preset.metrics.map((metric) => (
+            <div key={metric.label} className="whiteboard-metric-card">
+              <span>{metric.label}</span>
+              <strong>{metric.value}</strong>
+            </div>
+          ))}
+        </div>
       </div>
 
       <div className="whiteboard-side-card">
@@ -665,10 +667,8 @@ function MeasuredNotebookPanel({ topic }: { topic: WhiteboardBenchmarkTopic }) {
       <div className="whiteboard-side-card whiteboard-side-card--env">
         <div className="whiteboard-control-header">TEST ENVIRONMENT</div>
         <div className="whiteboard-environment-grid">
-          <EnvironmentRow label="Python" value={`${WHITEBOARD_BENCHMARKS.environment.implementation} ${WHITEBOARD_BENCHMARKS.environment.pythonVersion}`} />
-          <EnvironmentRow label="Platform" value={WHITEBOARD_BENCHMARKS.environment.platform} />
-          <EnvironmentRow label="Machine" value={`${WHITEBOARD_BENCHMARKS.environment.machine} · ${WHITEBOARD_BENCHMARKS.environment.cpuCount ?? "?"} CPUs`} />
-          <EnvironmentRow label="Generated" value={WHITEBOARD_BENCHMARKS.environment.generatedAtUtc} />
+          <EnvironmentRow label="Python Version" value={WHITEBOARD_BENCHMARKS.environment.pythonVersion} />
+          <EnvironmentRow label="Machine" value={WHITEBOARD_BENCHMARKS.environment.machine} />
         </div>
       </div>
     </div>
@@ -685,6 +685,18 @@ function EnvironmentRow({ label, value }: { label: string; value: string }) {
 }
 
 function BenchmarkChart({ preset }: { preset: WhiteboardBenchmarkPreset }) {
+  switch (preset.chartKind) {
+    case "bar":
+      return <BarBenchmarkChart preset={preset} />
+    case "lollipop":
+      return <LollipopBenchmarkChart preset={preset} />
+    default:
+      return <LineBenchmarkChart preset={preset} />
+  }
+}
+
+function LineBenchmarkChart({ preset }: { preset: WhiteboardBenchmarkPreset }) {
+  const clipId = useId().replace(/:/g, "")
   const width = 332
   const height = 216
   const padding = { top: 18, right: 16, bottom: 34, left: 42 }
@@ -694,69 +706,257 @@ function BenchmarkChart({ preset }: { preset: WhiteboardBenchmarkPreset }) {
   const yTicks = [0, maxValue / 2, maxValue]
 
   return (
-    <div className="whiteboard-chart-card">
+    <div className="whiteboard-chart-card whiteboard-chart-card--line">
       <div className="whiteboard-chart-title">{preset.chartTitle}</div>
       <svg viewBox={`0 0 ${width} ${height}`} className="whiteboard-chart-svg" aria-hidden="true">
-        <path d={`M ${padding.left} ${padding.top} V ${height - padding.bottom} H ${width - padding.right}`} stroke={MARKER_COLORS.black} strokeWidth="1.4" filter="url(#wobble)" fill="none" />
+        <defs>
+          <clipPath id={clipId}>
+            <rect x={padding.left} y={padding.top} width={plotWidth} height={plotHeight} />
+          </clipPath>
+        </defs>
+        <ChartAxes width={width} height={height} padding={padding} plotWidth={plotWidth} plotHeight={plotHeight} yTicks={yTicks} yUnit={preset.yUnit} xLabels={preset.xLabels} />
         {yTicks.map((tick) => {
           const ratio = tick / maxValue
           const y = padding.top + plotHeight - ratio * plotHeight
           return (
-            <g key={tick}>
-              <path d={`M ${padding.left - 4} ${y} H ${padding.left + plotWidth}`} stroke="rgba(0,0,0,0.08)" strokeWidth="0.9" filter="url(#softWobble)" fill="none" />
-              <text x={6} y={y + 4} className="whiteboard-chart-axis">
-                {formatChartTick(tick, preset.yUnit)}
-              </text>
-            </g>
+            <path key={tick} d={`M ${padding.left - 4} ${y} H ${padding.left + plotWidth}`} stroke="rgba(0,0,0,0.08)" strokeWidth="0.9" filter="url(#softWobble)" fill="none" />
           )
         })}
 
-        {preset.xLabels.map((tick, index) => {
-          const x = padding.left + (plotWidth / Math.max(preset.xLabels.length - 1, 1)) * index
-          return (
-            <text key={tick} x={x - tick.length * 2.2} y={height - 10} className="whiteboard-chart-axis">
-              {tick}
-            </text>
-          )
-        })}
+        <g clipPath={`url(#${clipId})`}>
+          {preset.series.map((series) => {
+            const path = series.values.map((point, index) => {
+              const x = padding.left + (plotWidth / Math.max(series.values.length - 1, 1)) * index
+              const y = padding.top + plotHeight - (point / maxValue) * plotHeight
+              return `${index === 0 ? "M" : "L"} ${x} ${y}`
+            }).join(" ")
 
-        {preset.series.map((series) => {
-          const path = series.values.map((point, index) => {
-            const x = padding.left + (plotWidth / Math.max(series.values.length - 1, 1)) * index
-            const y = padding.top + plotHeight - (point / maxValue) * plotHeight
-            return `${index === 0 ? "M" : "L"} ${x} ${y}`
-          }).join(" ")
-
-          return (
-            <g key={series.label}>
-              <motion.path
-                d={path}
-                stroke={series.color}
-                strokeWidth="2.4"
-                fill="none"
-                filter="url(#wobble)"
-                initial={{ pathLength: 0 }}
-                animate={{ pathLength: 1 }}
-                transition={{ duration: 0.45, ease: "easeOut" }}
-              />
-              {series.values.map((point, index) => {
-                const x = padding.left + (plotWidth / Math.max(series.values.length - 1, 1)) * index
-                const y = padding.top + plotHeight - (point / maxValue) * plotHeight
-                return <circle key={`${series.label}-${index}`} cx={x} cy={y} r="2.8" fill={series.color} filter="url(#softWobble)" />
-              })}
-            </g>
-          )
-        })}
+            return (
+              <g key={series.label}>
+                <motion.path
+                  d={path}
+                  stroke={series.color}
+                  strokeWidth="2.4"
+                  fill="none"
+                  filter="url(#wobble)"
+                  initial={{ pathLength: 0 }}
+                  animate={{ pathLength: 1 }}
+                  transition={{ duration: 0.45, ease: "easeOut" }}
+                />
+                {series.values.map((point, index) => {
+                  const x = padding.left + (plotWidth / Math.max(series.values.length - 1, 1)) * index
+                  const y = padding.top + plotHeight - (point / maxValue) * plotHeight
+                  return <circle key={`${series.label}-${index}`} cx={x} cy={y} r="2.8" fill={series.color} filter="url(#softWobble)" />
+                })}
+              </g>
+            )
+          })}
+        </g>
       </svg>
+      <BenchmarkLegend preset={preset} />
+    </div>
+  )
+}
 
-      <div className="whiteboard-chart-legend">
-        {preset.series.map((series) => (
-          <div key={series.label} className="whiteboard-legend-item">
-            <span style={{ color: series.color }}>—</span>
-            <span>{series.label}</span>
-          </div>
-        ))}
-      </div>
+function BarBenchmarkChart({ preset }: { preset: WhiteboardBenchmarkPreset }) {
+  const clipId = useId().replace(/:/g, "")
+  const width = 332
+  const height = 228
+  const padding = { top: 18, right: 16, bottom: 40, left: 42 }
+  const plotWidth = width - padding.left - padding.right
+  const plotHeight = height - padding.top - padding.bottom
+  const maxValue = Math.max(...preset.series.flatMap((series) => series.values), 1)
+  const yTicks = [0, maxValue / 2, maxValue]
+  const groupWidth = plotWidth / Math.max(preset.xLabels.length, 1)
+  const barGap = 6
+  const usableGroupWidth = Math.max(groupWidth - 10, 24)
+  const barWidth = Math.max(8, Math.min(24, (usableGroupWidth - barGap * (preset.series.length - 1)) / Math.max(preset.series.length, 1)))
+  const offsetWidth = preset.series.length * barWidth + Math.max(preset.series.length - 1, 0) * barGap
+
+  return (
+    <div className="whiteboard-chart-card whiteboard-chart-card--bar">
+      <div className="whiteboard-chart-title">{preset.chartTitle}</div>
+      <svg viewBox={`0 0 ${width} ${height}`} className="whiteboard-chart-svg" aria-hidden="true">
+        <defs>
+          <clipPath id={clipId}>
+            <rect x={padding.left} y={padding.top} width={plotWidth} height={plotHeight} />
+          </clipPath>
+        </defs>
+        <ChartAxes width={width} height={height} padding={padding} plotWidth={plotWidth} plotHeight={plotHeight} yTicks={yTicks} yUnit={preset.yUnit} xLabels={preset.xLabels} grouped />
+        {yTicks.map((tick) => {
+          const ratio = tick / maxValue
+          const y = padding.top + plotHeight - ratio * plotHeight
+          return <path key={tick} d={`M ${padding.left - 4} ${y} H ${padding.left + plotWidth}`} stroke="rgba(0,0,0,0.08)" strokeWidth="0.9" filter="url(#softWobble)" fill="none" />
+        })}
+
+        <g clipPath={`url(#${clipId})`}>
+          {preset.xLabels.map((_, labelIndex) => {
+            const groupCenter = padding.left + groupWidth * labelIndex + groupWidth / 2
+            const groupLeft = groupCenter - offsetWidth / 2
+
+            return preset.series.map((series, seriesIndex) => {
+              const value = series.values[labelIndex] ?? 0
+              const barHeight = (value / maxValue) * plotHeight
+              const x = groupLeft + seriesIndex * (barWidth + barGap)
+              const y = padding.top + plotHeight - barHeight
+
+              return (
+                <motion.rect
+                  key={`${series.label}-${labelIndex}`}
+                  x={x}
+                  y={y}
+                  width={barWidth}
+                  height={barHeight}
+                  rx="2.5"
+                  fill={series.color}
+                  opacity="0.9"
+                  filter="url(#softWobble)"
+                  initial={{ height: 0, y: padding.top + plotHeight }}
+                  animate={{ height: barHeight, y }}
+                  transition={{ duration: 0.35, ease: "easeOut" }}
+                />
+              )
+            })
+          })}
+        </g>
+      </svg>
+      <BenchmarkLegend preset={preset} />
+    </div>
+  )
+}
+
+function LollipopBenchmarkChart({ preset }: { preset: WhiteboardBenchmarkPreset }) {
+  const clipId = useId().replace(/:/g, "")
+  const width = 332
+  const height = 228
+  const padding = { top: 18, right: 16, bottom: 40, left: 42 }
+  const plotWidth = width - padding.left - padding.right
+  const plotHeight = height - padding.top - padding.bottom
+  const maxValue = Math.max(...preset.series.flatMap((series) => series.values), 1)
+  const yTicks = [0, maxValue / 2, maxValue]
+  const groupWidth = plotWidth / Math.max(preset.xLabels.length, 1)
+  const stemGap = 10
+  const usableGroupWidth = Math.max(groupWidth - 10, 22)
+  const step = preset.series.length > 1 ? Math.min(stemGap, usableGroupWidth / Math.max(preset.series.length - 1, 1)) : 0
+  const groupSpan = step * Math.max(preset.series.length - 1, 0)
+
+  return (
+    <div className="whiteboard-chart-card whiteboard-chart-card--lollipop">
+      <div className="whiteboard-chart-title">{preset.chartTitle}</div>
+      <svg viewBox={`0 0 ${width} ${height}`} className="whiteboard-chart-svg" aria-hidden="true">
+        <defs>
+          <clipPath id={clipId}>
+            <rect x={padding.left} y={padding.top} width={plotWidth} height={plotHeight} />
+          </clipPath>
+        </defs>
+        <ChartAxes width={width} height={height} padding={padding} plotWidth={plotWidth} plotHeight={plotHeight} yTicks={yTicks} yUnit={preset.yUnit} xLabels={preset.xLabels} grouped />
+        {yTicks.map((tick) => {
+          const ratio = tick / maxValue
+          const y = padding.top + plotHeight - ratio * plotHeight
+          return <path key={tick} d={`M ${padding.left - 4} ${y} H ${padding.left + plotWidth}`} stroke="rgba(0,0,0,0.08)" strokeWidth="0.9" filter="url(#softWobble)" fill="none" />
+        })}
+
+        <g clipPath={`url(#${clipId})`}>
+          {preset.xLabels.map((_, labelIndex) => {
+            const baseCenter = padding.left + groupWidth * labelIndex + groupWidth / 2
+            const startX = baseCenter - groupSpan / 2
+
+            return preset.series.map((series, seriesIndex) => {
+              const value = series.values[labelIndex] ?? 0
+              const x = startX + seriesIndex * step
+              const y = padding.top + plotHeight - (value / maxValue) * plotHeight
+
+              return (
+                <g key={`${series.label}-${labelIndex}`}>
+                  <motion.path
+                    d={`M ${x} ${padding.top + plotHeight} L ${x} ${y}`}
+                    stroke={series.color}
+                    strokeWidth="2"
+                    fill="none"
+                    filter="url(#wobble)"
+                    initial={{ pathLength: 0 }}
+                    animate={{ pathLength: 1 }}
+                    transition={{ duration: 0.3, ease: "easeOut" }}
+                  />
+                  <motion.circle
+                    cx={x}
+                    cy={y}
+                    r="4.1"
+                    fill={series.color}
+                    filter="url(#softWobble)"
+                    initial={{ scale: 0.2, opacity: 0.2 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ duration: 0.24, ease: "easeOut" }}
+                  />
+                </g>
+              )
+            })
+          })}
+        </g>
+      </svg>
+      <BenchmarkLegend preset={preset} />
+    </div>
+  )
+}
+
+function ChartAxes({
+  width,
+  height,
+  padding,
+  plotWidth,
+  plotHeight,
+  yTicks,
+  yUnit,
+  xLabels,
+  grouped = false,
+}: {
+  width: number
+  height: number
+  padding: { top: number; right: number; bottom: number; left: number }
+  plotWidth: number
+  plotHeight: number
+  yTicks: number[]
+  yUnit: WhiteboardBenchmarkPreset["yUnit"]
+  xLabels: string[]
+  grouped?: boolean
+}) {
+  return (
+    <>
+      <path d={`M ${padding.left} ${padding.top} V ${height - padding.bottom} H ${width - padding.right}`} stroke={MARKER_COLORS.black} strokeWidth="1.4" filter="url(#wobble)" fill="none" />
+      {yTicks.map((tick) => {
+        const ratio = tick / Math.max(yTicks[yTicks.length - 1], 1)
+        const y = padding.top + plotHeight - ratio * plotHeight
+        return (
+          <text key={`tick-${tick}`} x={6} y={y + 4} className="whiteboard-chart-axis">
+            {formatChartTick(tick, yUnit)}
+          </text>
+        )
+      })}
+      {xLabels.map((tick, index) => {
+        const divisor = grouped ? Math.max(xLabels.length, 1) : Math.max(xLabels.length - 1, 1)
+        const x = grouped
+          ? padding.left + (plotWidth / divisor) * index + plotWidth / divisor / 2
+          : padding.left + (plotWidth / divisor) * index
+
+        return (
+          <text key={tick} x={x} y={height - 10} textAnchor="middle" className="whiteboard-chart-axis">
+            {tick}
+          </text>
+        )
+      })}
+    </>
+  )
+}
+
+function BenchmarkLegend({ preset }: { preset: WhiteboardBenchmarkPreset }) {
+  return (
+    <div className="whiteboard-chart-legend">
+      {preset.series.map((series) => (
+        <div key={series.label} className="whiteboard-legend-item">
+          <span className="whiteboard-legend-swatch" style={{ background: series.color }} />
+          <span>{series.label}</span>
+        </div>
+      ))}
     </div>
   )
 }

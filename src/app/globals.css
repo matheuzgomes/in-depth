@@ -2846,7 +2846,7 @@ pre {
 
 .whiteboard-chart-card {
   display: grid;
-  gap: 4px;
+  gap: 8px;
 }
 
 .whiteboard-chart-svg {
@@ -2873,6 +2873,15 @@ pre {
   display: flex;
   align-items: center;
   gap: 4px;
+}
+
+.whiteboard-legend-swatch {
+  display: inline-block;
+  width: 11px;
+  height: 11px;
+  border-radius: 999px;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.08);
 }
 
 .whiteboard-control-block,
@@ -3742,6 +3751,10 @@ pre {
     line-height: 1.4;
   }
 
+  .whiteboard-metric-card-grid {
+    grid-template-columns: 1fr;
+  }
+
   .guide-reader-shell {
     width: min(100%, calc(100vw - 28px));
     padding-top: 18px;
@@ -4000,14 +4013,27 @@ pre {
   padding: 0;
   margin: 10px 0 0;
   display: grid;
-  gap: 6px;
+  gap: 8px;
   font-family: var(--font-board-body);
   font-size: 15px;
 }
 
+.whiteboard-visual-list li {
+  position: relative;
+  padding-left: 18px;
+  color: #172033;
+}
+
 .whiteboard-visual-list li::before {
-  content: "• ";
-  color: #1a2e6e;
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.46em;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: #1a2e6e;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.35);
 }
 
 .whiteboard-guide-link {
@@ -4249,15 +4275,53 @@ pre {
   color: #1f2937;
 }
 
+.whiteboard-metric-card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.whiteboard-metric-card {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding: 10px 10px 9px;
+  border: 1px solid rgba(26, 46, 110, 0.14);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+
+.whiteboard-metric-card span {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  line-height: 1.3;
+  font-weight: 600;
+  color: #475569;
+}
+
+.whiteboard-metric-card strong {
+  font-family: var(--font-ui);
+  font-size: 16px;
+  line-height: 1.15;
+  font-weight: 800;
+  color: #102a63;
+}
+
 .whiteboard-environment-row {
   display: grid;
-  grid-template-columns: 64px minmax(0, 1fr);
-  gap: 6px;
+  grid-template-columns: 108px minmax(0, 1fr);
+  gap: 8px;
   align-items: start;
   font-family: var(--font-ui);
   font-size: 13px;
   line-height: 1.46;
   color: #1a1a1a;
+}
+
+.whiteboard-environment-row span {
+  color: #475569;
+  font-weight: 700;
 }
 
 .whiteboard-environment-row strong {
@@ -4302,7 +4366,7 @@ pre {
 }
 
 .whiteboard-measured-stack .whiteboard-select,
-.whiteboard-measured-stack .whiteboard-metric-row {
+.whiteboard-measured-stack .whiteboard-metric-card {
   font-family: var(--font-ui);
   font-size: 12px;
   line-height: 1.45;
@@ -4323,15 +4387,10 @@ pre {
 }
 
 .whiteboard-measured-stack .whiteboard-environment-row {
-  grid-template-columns: 68px minmax(0, 1fr);
+  grid-template-columns: 108px minmax(0, 1fr);
   font-size: 11px;
   line-height: 1.5;
   color: #334155;
-}
-
-.whiteboard-measured-stack .whiteboard-environment-row span {
-  font-weight: 600;
-  color: #475569;
 }
 
 .whiteboard-topic-description {

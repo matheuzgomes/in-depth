@@ -24,15 +24,7 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
     // Override standard elements
     p: ({ children }) => <p style={{ marginBottom: 12 }}>{children}</p>,
     code: ({ children }) => (
-      <code style={{
-        fontFamily: "var(--font-mono)",
-        background: "rgba(255, 255, 255, 0.04)",
-        color: T.text1,
-        padding: "2px 6px",
-        borderRadius: 999,
-        fontSize: "0.92em",
-        border: `1px solid rgba(232,224,208,0.08)`,
-      }}>
+      <code className="mdx-inline-code" style={{ fontFamily: "var(--font-mono)" }}>
         {children}
       </code>
     ),

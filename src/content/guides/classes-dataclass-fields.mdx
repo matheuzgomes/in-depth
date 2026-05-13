@@ -78,7 +78,7 @@ This is a CPython memory-layout concern, not a language guarantee, but it is one
 
 <SLabel>Version context</SLabel>
 
-Dataclasses were added in Python 3.7 [PEP 557]. `slots=True` was added in Python 3.10. `weakref_slot=True` was added in Python 3.11. Current project guidance targets Python 3.10-3.14. Python 3.9 and below are End-of-Life.
+Dataclasses were added in Python 3.7 [PEP 557]. `slots=True` and `match_args=True` were added in Python 3.10. `weakref_slot=True` was added in Python 3.11, and the docs require it to be paired with `slots=True`. Current project guidance targets Python 3.10-3.14. Python 3.9 and below are End-of-Life.
 
 ```python
 # [CURRENT - 3.10-3.14] Requires Python 3.10+
@@ -90,7 +90,7 @@ class Point:
     y: int
 ```
 
-Dataclasses also generate `__match_args__` by default, which makes them participate naturally in structural pattern matching.
+Dataclasses also generate `__match_args__` by default in Python 3.10+, which makes them participate naturally in structural pattern matching. Keyword-only fields are excluded from `__match_args__`.
 
 ```python
 # [CURRENT - 3.10-3.14] Requires Python 3.10+

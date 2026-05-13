@@ -41,6 +41,7 @@ That prints `building default` even though `"x"` already exists. This is the mai
 # [CURRENT - 3.10-3.14] Works on Python 3.x
 from collections import defaultdict
 
+pairs = [("python", 3), ("dict", 8), ("python", 14)]
 index = defaultdict(list)
 for word, location in pairs:
     index[word].append(location)
@@ -55,6 +56,7 @@ This common spelling spreads one idea across multiple dict operations:
 ```python
 # [CURRENT - 3.10-3.14] Works on Python 3.x
 index = {}
+pairs = [("python", 3), ("dict", 8), ("python", 14)]
 
 for word, location in pairs:
     if word not in index:
@@ -68,6 +70,10 @@ The older `get`-then-store pattern is especially noisy because it tends to perfo
 
 ```python
 # [CURRENT - 3.10-3.14] Works on Python 3.x
+index = {"python": [3]}
+word = "python"
+location = 14
+
 occurrences = index.get(word, [])
 occurrences.append(location)
 index[word] = occurrences

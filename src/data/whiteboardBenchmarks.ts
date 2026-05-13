@@ -34,6 +34,7 @@ export interface WhiteboardBenchmarkMetric {
 }
 
 export interface WhiteboardBenchmarkPreset {
+  chartKind: "line" | "bar" | "lollipop"
   chartTitle: string
   xLabels: string[]
   yUnit: "us" | "ms" | "kib"
