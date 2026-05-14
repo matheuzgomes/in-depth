@@ -91,7 +91,7 @@ export function WhiteboardExperience({
   const [tocNote] = useState(() => pickTocNote())
 
   useEffect(() => { setMounted(true) }, [])
-  const [openSectionIds, setOpenSectionIds] = useState<Set<string>>(() => new Set(WHITEBOARD_SECTIONS.map((section) => section.id)))
+  const [openSectionIds, setOpenSectionIds] = useState<Set<string>>(() => new Set())
   const [loadedGuides, setLoadedGuides] = useState<LoadedGuideMap>({})
   const [guideLoadState, setGuideLoadState] = useState<GuideLoadState>({})
   const surfaceRef = useRef<HTMLDivElement | null>(null)

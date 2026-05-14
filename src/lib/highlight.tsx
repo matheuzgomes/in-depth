@@ -13,11 +13,11 @@ const TOKENS = [
 ]
 
 const TC: Record<string, string> = {
-  cm:  "#4e4c5e",
-  kw:  T.purple.fg,
-  str: T.amber.fg,
-  num: T.blue.fg,
-  fn:  T.teal.fg,
+  cm:  "var(--hl-cm, #4e4c5e)",
+  kw:  "var(--hl-kw, " + T.purple.fg + ")",
+  str: "var(--hl-str, " + T.amber.fg + ")",
+  num: "var(--hl-num, " + T.blue.fg + ")",
+  fn:  "var(--hl-fn, " + T.teal.fg + ")",
 }
 
 export function highlightLine(line: string): ReactNode[] {
@@ -37,10 +37,10 @@ export function highlightLine(line: string): ReactNode[] {
     }
 
     if (!best) {
-      parts.push(<span key={key++} style={{ color: "#c8c6d4" }}>{rest}</span>)
+      parts.push(<span key={key++} style={{ color: "var(--hl-text, #c8c6d4)" }}>{rest}</span>)
       break
     }
-    if (bi > 0) parts.push(<span key={key++} style={{ color: "#c8c6d4" }}>{rest.slice(0, bi)}</span>)
+    if (bi > 0) parts.push(<span key={key++} style={{ color: "var(--hl-text, #c8c6d4)" }}>{rest.slice(0, bi)}</span>)
     parts.push(<span key={key++} style={{ color: TC[best.cls] }}>{best.m[0]}</span>)
     rest = rest.slice(bi + best.m[0].length)
   }

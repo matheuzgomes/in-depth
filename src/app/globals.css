@@ -2550,9 +2550,6 @@ pre {
   opacity: 0;
 }
 
-.whiteboard-topic-row.is-active .whiteboard-topic-bullet {
-  opacity: 1;
-}
 
 .whiteboard-topic-number {
   text-align: right;
@@ -3458,9 +3455,9 @@ pre {
     right: 18px;
     bottom: 16px;
     width: min(360px, calc(100% - 36px));
-    background: rgba(245, 242, 236, 0.98);
-    border: 2px solid rgba(26, 26, 26, 0.45);
-    padding: 12px;
+    background: transparent;
+    border: none;
+    padding: 0;
     transform: translateY(calc(100% + 20px));
     transition: transform 0.22s ease;
     z-index: 20;
@@ -3855,7 +3852,6 @@ pre {
   position: sticky;
   top: 18px;
   align-self: start;
-  height: calc(100vh - 170px);
   max-height: calc(100vh - 170px);
   padding: 12px;
   border: 1.8px solid rgba(26, 46, 110, 0.36);
@@ -3924,12 +3920,11 @@ pre {
   top: 18px;
   align-self: start;
   max-height: calc(100vh - 170px);
-  padding: 10px;
-  border: 1.8px solid rgba(26, 26, 26, 0.28);
-  background: rgba(245, 242, 236, 0.94);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+  padding: 0;
+  border: none;
+  background: transparent;
   overflow: auto;
-  filter: url(#softWobble);
+  filter: none;
 }
 
 .whiteboard-running-dot.is-muted {
@@ -3947,9 +3942,10 @@ pre {
 .whiteboard-control-block,
 .whiteboard-metrics-block,
 .whiteboard-side-card {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  padding: 10px 12px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
 }
 
 .whiteboard-select+.whiteboard-select {
@@ -3962,7 +3958,8 @@ pre {
 
 .whiteboard-select--stacked select {
   grid-column: 2 / span 2;
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(26, 46, 110, 0.15);
 }
 
 .whiteboard-metric-row--static {
@@ -4111,6 +4108,22 @@ pre {
   --callout-size: 13px;
   --callout-line-height: 1.75;
   --callout-shadow: 0 1px 0 rgba(255, 255, 255, 0.28) inset;
+  --cb-bg-start: #f5f2ec;
+  --cb-bg-end: #f5f2ec;
+  --cb-border: none;
+  --cb-shadow: none;
+  --cb-filter: none;
+  --cb-padding: 16px 18px;
+  --cb-margin: 12px 0;
+  --cb-btn-bg: rgba(0, 0, 0, 0.04);
+  --cb-btn-border: 1px solid rgba(26, 26, 26, 0.12);
+  --cb-btn-color: #4a4a4a;
+  --hl-text: #1f2937;
+  --hl-cm: #6b7280;
+  --hl-kw: #7c3aed;
+  --hl-str: #b45309;
+  --hl-num: #2563eb;
+  --hl-fn: #059669;
   padding: 4px 2px 8px 0;
   border: 0;
   background: transparent;
@@ -4198,9 +4211,9 @@ pre {
 }
 
 .whiteboard-guide-article code:not(pre code) {
-  background: rgba(26, 46, 110, 0.07);
+  font-family: var(--font-board-body) !important;
+  font-size: large;
   color: #102a63;
-  border: 1px solid rgba(26, 46, 110, 0.1);
 }
 
 .whiteboard-guide-article pre {
@@ -4270,24 +4283,23 @@ pre {
 }
 
 .whiteboard-measured-stack .whiteboard-sim-title {
-  font-family: var(--font-ui);
-  font-size: 19px;
-  line-height: 1.2;
-  font-weight: 700;
+  font-family: var(--font-board-display);
+  font-size: 20px;
+  line-height: 1.15;
   color: #0f172a;
 }
 
 .whiteboard-measured-stack .whiteboard-side-copy,
 .whiteboard-measured-stack .whiteboard-side-copy--compact {
-  font-family: var(--font-ui);
-  font-size: 13px;
-  line-height: 1.55;
+  font-family: var(--font-board-body);
+  font-size: 14px;
+  line-height: 1.5;
   color: #1f2937;
 }
 
 .whiteboard-dot-list--notes li {
-  font-family: var(--font-ui);
-  font-size: 12px;
+  font-family: var(--font-board-body);
+  font-size: 13px;
   line-height: 1.58;
   color: #1f2937;
 }
@@ -4300,20 +4312,18 @@ pre {
 
 .whiteboard-metric-card {
   display: grid;
-  gap: 5px;
+  gap: 3px;
   min-width: 0;
-  padding: 10px 10px 9px;
-  border: 1px solid rgba(26, 46, 110, 0.14);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.72);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
 }
 
 .whiteboard-metric-card span {
-  font-family: var(--font-ui);
-  font-size: 11px;
+  font-family: var(--font-board-body);
+  font-size: 12px;
   line-height: 1.3;
-  font-weight: 600;
   color: #475569;
 }
 
@@ -4347,18 +4357,20 @@ pre {
 }
 
 .whiteboard-measured-stack .whiteboard-chart-title {
-  font-family: var(--font-ui);
-  font-size: 13px;
-  line-height: 1.35;
-  font-weight: 600;
+  font-family: var(--font-board-body);
+  font-size: 14px;
+  line-height: 1.3;
   color: #0f172a;
 }
 
-.whiteboard-measured-stack .whiteboard-chart-axis,
-.whiteboard-measured-stack .whiteboard-chart-legend {
-  font-family: var(--font-ui);
-  color: #334155;
+.whiteboard-measured-stack .whiteboard-chart-axis {
   fill: #475569;
+}
+
+.whiteboard-measured-stack .whiteboard-chart-legend {
+  font-family: var(--font-board-body);
+  font-size: 12px;
+  color: #334155;
 }
 
 .whiteboard-measured-stack .whiteboard-chart-legend {
@@ -4367,7 +4379,8 @@ pre {
 }
 
 .whiteboard-measured-stack .whiteboard-control-header {
-  font-size: 16px;
+  font-family: var(--font-board-display);
+  font-size: 18px;
   line-height: 1.15;
   color: #102a63;
   margin-bottom: 8px;
@@ -4376,26 +4389,27 @@ pre {
 .whiteboard-measured-stack .whiteboard-control-block,
 .whiteboard-measured-stack .whiteboard-metrics-block,
 .whiteboard-measured-stack .whiteboard-side-card {
-  border: 1px solid rgba(26, 46, 110, 0.18);
-  background: rgba(245, 242, 236, 0.78);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  border: none;
+  background: transparent;
+  box-shadow: none;
   filter: none;
+  padding: 0;
 }
 
 .whiteboard-measured-stack .whiteboard-select,
 .whiteboard-measured-stack .whiteboard-metric-card {
-  font-family: var(--font-ui);
-  font-size: 12px;
+  font-family: var(--font-board-body);
+  font-size: 13px;
   line-height: 1.45;
   color: #1f2937;
 }
 
 .whiteboard-measured-stack .whiteboard-select select {
-  font-family: var(--font-ui);
-  font-size: 12px;
+  font-family: var(--font-board-body);
+  font-size: 13px;
   color: #0f172a;
-  border-color: rgba(26, 46, 110, 0.22);
-  background: rgba(245, 242, 236, 0.92);
+  border-color: rgba(26, 46, 110, 0.2);
+  background: rgba(255, 255, 255, 0.6);
 }
 
 .whiteboard-measured-stack .whiteboard-metric-row strong {
@@ -4405,7 +4419,8 @@ pre {
 
 .whiteboard-measured-stack .whiteboard-environment-row {
   grid-template-columns: 108px minmax(0, 1fr);
-  font-size: 11px;
+  font-family: var(--font-board-body);
+  font-size: 12px;
   line-height: 1.5;
   color: #334155;
 }
@@ -4478,7 +4493,6 @@ pre {
   }
 
   .whiteboard-toc {
-    height: min(72vh, 780px);
     max-height: min(72vh, 780px);
   }
 
@@ -4527,7 +4541,7 @@ pre {
 }
 
 .whiteboard-columns {
-  grid-template-columns: minmax(260px, 286px) minmax(0, 1fr) minmax(276px, 336px);
+  grid-template-columns: minmax(260px, 340px) minmax(0, 1fr) minmax(276px, 336px);
   align-items: start;
 }
 
