@@ -25,14 +25,16 @@ export function CodeBlock({ code }: CodeBlockProps) {
     let cancelled = false
 
     async function draw() {
-      const w = svg.clientWidth
-      const h = svg.clientHeight
+      const s = svgRef.current
+      if (!s) return
+      const w = s.clientWidth
+      const h = s.clientHeight
       if (w === 0 || h === 0) return
 
-      while (svg.firstChild) svg.removeChild(svg.firstChild)
+      while (s.firstChild) s.removeChild(s.firstChild)
       const rough = (await import("roughjs")).default
       if (cancelled) return
-      const rc = rough.svg(svg)
+      const rc = rough.svg(s)
       const node = rc.rectangle(0, 0, w, h, {
         seed: 42,
         stroke: "rgba(26, 26, 26, 0.55)",
@@ -44,7 +46,7 @@ export function CodeBlock({ code }: CodeBlockProps) {
       })
       if (node) {
         node.setAttribute("filter", "url(#softWobble)")
-        svg.appendChild(node)
+        s.appendChild(node)
       }
     }
 
