@@ -2841,7 +2841,7 @@ pre {
   gap: 8px;
   color: #c0392b;
   font-family: var(--font-board-display);
-  font-size: 19px;
+  font-size: 18px;
   cursor: pointer;
 }
 
@@ -4061,15 +4061,19 @@ pre {
   font-size: 18px;
 }
 
-.whiteboard-action-row,
+.whiteboard-action-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: end;
+}
+
 .whiteboard-visual-actions,
 .whiteboard-guide-actions,
 .whiteboard-guide-footer-actions {
   display: grid;
-  gap: 8px;
 }
 
-.whiteboard-action-row,
 .whiteboard-guide-actions,
 .whiteboard-guide-footer-actions,
 .whiteboard-visual-actions {
@@ -4520,6 +4524,7 @@ pre {
 
   .whiteboard-visual-bottom {
     grid-template-columns: 1fr;
+    justify-content: end;
   }
 
   .whiteboard-visual-actions,
@@ -4631,6 +4636,7 @@ pre {
 
 .whiteboard-visual-actions {
   align-self: start;
+  margin-top: auto;
 }
 
 .whiteboard-guide-footer-actions {
