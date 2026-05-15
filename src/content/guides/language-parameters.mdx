@@ -16,7 +16,7 @@ Keyword-only options are not cosmetic. They prevent opaque call sites such as `r
 
 <SLabel>Mechanism and binding</SLabel>
 
-Before the function body runs, Python binds arguments to parameters according to the call rules in the language reference. Extra positional arguments become a tuple via `*args`. Extra keyword arguments become a dict via `**kwargs`.
+Before the function body runs, Python binds arguments to parameters according to the [call rules in the language reference](https://docs.python.org/3/reference/expressions.html#calls). Extra positional arguments become a tuple via `*args`. Extra keyword arguments become a dict via `**kwargs`.
 
 ```python
 # [CURRENT - 3.10-3.14] Works on Python 3.x

@@ -4,7 +4,7 @@ This is the top-level container choice guide for `list`, `tuple`, `set`, and `ar
 
 <SLabel>Core answer</SLabel>
 
-Use:
+Use ──────────────────────────────────────────────
 
 - `list` for general mutable ordered collections
 - `tuple` for fixed-shape ordered records
@@ -113,6 +113,37 @@ print(packed)
 ```
 
 The typecode matters because it selects the underlying C representation. For example, `"d"` uses C `double`, and `"I"` uses C `unsigned int`. The exact width comes from the platform C type, which is why typecode details are stdlib API contracts rather than universal byte-count guarantees.
+
+<SLabel>CPython internals</SLabel>
+
+Each container type has a distinct C-level representation in CPython 3.12:
+
+**`list`** (`Objects/listobject.c`). The `PyListObject` contains:
+- `ob_item` — a pointer to a `PyObject**` array allocated separately from the list object
+- `allocated` — the number of slots reserved in the `ob_item` array, which may exceed `ob_size` (the logical length)
+- overallocation follows `new_allocated = (size_t)newsize + (newsize >> 3) + (newsize < 9 ? 3 : 6)` (from `listobject.c`, the `list_resize` function), which gives ~12.5% spare capacity plus a constant
+
+**`tuple`** (`Objects/tupleobject.c`). The `PyTupleObject` stores its `ob_item` array inline within the object allocation. There is no separate array, no spare capacity, and the size is fixed at creation.
+
+**`set`** (`Objects/setobject.c`). The `PySetObject` contains:
+- a hash table with `fill` (occupied + dummy) and `used` (active) counters
+- minimum size of `PySet_MINSIZE = 8` slots
+- the same `USABLE_FRACTION = 2/3` resize policy as dict
+
+**`array.array`** (`Modules/arraymodule.c`). The array object stores:
+- a contiguous C array of values determined by the typecode
+- the buffer is part of the array object's allocation (for small arrays) or a separately allocated block (for large arrays)
+- no per-element Python object overhead
+
+The key insight from the CPython C source is the difference in allocation patterns:
+- `tuple` does one allocation for the whole object; a 1000-element tuple is one contiguous block
+- `list` does two allocations (object + reference array); growth triggers reallocation of the reference array, copying all existing pointers
+- `set` does three allocations per resize (object + indices + entries hash tables); resize is the most expensive per-element operation
+- `array.array` does one or two allocations; growth reallocates the raw C buffer, copying the raw bytes
+
+<Callout type="info">
+  Ramalho (Fluent Python, 2nd ed., Ch. 2) describes the list overallocation pattern as "a compromise between the two extremes: too little overallocation wastes append performance; too much wastes memory." The exact formula is implementation-specific, but the tradeoff is a fundamental property of dynamic arrays.
+</Callout>
 
 <SLabel>Measured memory proof</SLabel>
 
@@ -417,4 +448,9 @@ For deeper internals and adjacent structures:
 - [array module](https://docs.python.org/3/library/array.html)
 - [sys.getsizeof](https://docs.python.org/3/library/sys.html#sys.getsizeof)
 - [timeit](https://docs.python.org/3/library/timeit.html)
-- [Data model: object.__hash__](https://docs.python.org/3/reference/datamodel.html#object.__hash__)
+- [Data model: object.\_\_hash\_\_](https://docs.python.org/3/reference/datamodel.html#object.__hash__)
+- [CPython source: Objects/listobject.c](https://github.com/python/cpython/blob/main/Objects/listobject.c)
+- [CPython source: Objects/tupleobject.c](https://github.com/python/cpython/blob/main/Objects/tupleobject.c)
+- [CPython source: Objects/setobject.c](https://github.com/python/cpython/blob/main/Objects/setobject.c)
+- [CPython source: Modules/arraymodule.c](https://github.com/python/cpython/blob/main/Modules/arraymodule.c)
+- Fluent Python, 2nd ed., Ch. 2: An Array of Sequences — covers list/tuple layout, overallocation, and array.array tradeoffs

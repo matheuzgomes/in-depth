@@ -32,19 +32,19 @@ print(asyncio.run(fetch_flag()))
 
 <SLabel>A few definitions</SLabel>
 
-Coroutine function:
+Coroutine function ───────────────────────────────
 
 - declared with `async def`
 
-Coroutine object:
+Coroutine object ─────────────────────────────────
 
 - created when a coroutine function is called
 
-Awaitable:
+Awaitable ────────────────────────────────────────
 
 - an object that can appear to the right of `await`
 
-Event loop:
+Event loop ───────────────────────────────────────
 
 - the scheduler that drives tasks and other awaitables forward when they become ready
 
@@ -77,7 +77,7 @@ That second pass is where latency, concurrency, and failure behavior become visi
 
 <SLabel>New concept: awaitable</SLabel>
 
-The language reference defines `await` in terms of the awaitable protocol. In practice, the main awaitables you touch in application code are:
+[The language reference](https://docs.python.org/3/reference/expressions.html#await) defines `await` in terms of the awaitable protocol. In practice, the main awaitables you touch in application code are:
 
 - coroutine objects
 - `asyncio.Task`
@@ -143,7 +143,7 @@ Current project guidance targets Python 3.10-3.14. Python 3.9 and below are End-
 
 Important version markers:
 
-- `async` / `await` syntax: Python 3.5+ [PEP 492]
+- `async` / `await` syntax: Python 3.5+ [PEP 492](https://peps.python.org/pep-0492/)
 - `asyncio.run`: Python 3.7+
 
 Because this project targets current Python, native coroutine syntax is the baseline. Generator-based coroutine style is historical context, not a recommended production style.
@@ -186,4 +186,3 @@ For production lifecycle, cancellation, and bounded fan-out, see <CardRef id="as
 - [asyncio](https://docs.python.org/3/library/asyncio.html)
 - [Coroutines and Tasks](https://docs.python.org/3/library/asyncio-task.html)
 - [PEP 492: Coroutines with async and await syntax](https://peps.python.org/pep-0492/)
-- [Fluent Python, 2nd Edition, Chapter 21](https://www.oreilly.com/library/view/fluent-python-2nd/9781492056348/ch21.html)

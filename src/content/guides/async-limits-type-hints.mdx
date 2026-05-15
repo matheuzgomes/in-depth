@@ -156,9 +156,9 @@ Current project guidance targets Python 3.10-3.14. Python 3.9 and below are End-
 
 Relevant version markers:
 
-- native coroutines and `await`: Python 3.5+ [PEP 492]
-- async generators: Python 3.6+ [PEP 525]
-- async comprehensions: Python 3.6+ [PEP 530]
+- native coroutines and `await`: Python 3.5+ [PEP 492](https://peps.python.org/pep-0492/)
+- async generators: Python 3.6+ [PEP 525](https://peps.python.org/pep-0525/)
+- async comprehensions: Python 3.6+ [PEP 530](https://peps.python.org/pep-0530/)
 - `collections.abc` generic aliases such as `AsyncIterator[int]`: standard modern spelling in current supported Python
 
 For this repo's supported range, these async protocol types are stable baseline tools. Older `typing`-module spellings remain historically relevant, but they are not the best default for new code unless compatibility constraints force them.
@@ -205,4 +205,3 @@ Type async APIs with protocol intent:
 - [PEP 492: Coroutines with async and await syntax](https://peps.python.org/pep-0492/)
 - [PEP 525: Asynchronous Generators](https://peps.python.org/pep-0525/)
 - [PEP 530: Asynchronous Comprehensions](https://peps.python.org/pep-0530/)
-- [Fluent Python, 2nd Edition, Chapter 21](https://www.oreilly.com/library/view/fluent-python-2nd/9781492056348/ch21.html)

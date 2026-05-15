@@ -26,29 +26,82 @@ Average-case lookup is effectively constant time because Python computes the has
 
 <SLabel>Mechanism and internals</SLabel>
 
-The portable rule is:
+The portable rule from the Python data model is:
 
 - if `a == b`, then `hash(a) == hash(b)` must also hold
-
-The CPython implementation uses an open-addressed hash table with probing for collisions. Exact collision resolution details are implementation-specific and have changed across releases, but the performance model remains the same: good hashes spread keys, bad hashes create more probes.
+- if `__eq__` is defined but `__hash__` is not, the class becomes unhashable (Python sets `__hash__` to `None`)
 
 ```python
 # [CURRENT - 3.10-3.14] Works on Python 3.x
-class BadKey:
+class Hashable:
     def __init__(self, value):
         self.value = value
 
+    def __eq__(self, other):
+        return isinstance(other, Hashable) and self.value == other.value
+
     def __hash__(self):
-        return 1
+        return hash(self.value)
+
+class Unhashable:
+    def __init__(self, value):
+        self.value = value
 
     def __eq__(self, other):
-        return isinstance(other, BadKey) and self.value == other.value
+        return isinstance(other, Unhashable) and self.value == other.value
 
-data = {BadKey(i): i for i in range(5)}
-print(len(data))
+try:
+    {Unhashable(1): "will fail"}
+except TypeError as exc:
+    print(exc)
 ```
 
-That dictionary still works correctly, but it is a hostile workload for the table because many keys compete for the same initial slot.
+A bad hash function does not break correctness, but it destroys performance. Fluent Python (Ramalho, 2022, Ch. 3) demonstrates this by noting that `hash(1) == hash(1.0) == hash(True)` all produce the same hash because Python's `int`, `float`, and `bool` types are all part of the numeric tower and compare equal across types. That means `{1: "int", 1.0: "float"}` has only one key — the second insertion overwrites the first.
+
+```python
+# [CURRENT - 3.10-3.14] Works on Python 3.x
+d = {}
+d[1] = "int"
+d[1.0] = "float"
+print(d)  # {1: 'float'}
+```
+
+That is not a bug: it follows from the numeric-comparison contract in the data model. Two values that compare equal must share the same dict slot.
+
+<SLabel>CPython internals</SLabel>
+
+CPython 3.12 implements dict using a **compact, ordered hash table** with two arrays per keys object, as described in `Objects/dictobject.c` (lines 30-60). The layout separates the hash table itself from the key-value storage:
+
+- `dk_indices` — a sparse array of signed integers. Each slot holds an index into the entries array (`>= 0`), or `DKIX_EMPTY` (`-1`) for unused slots, or `DKIX_DUMMY` (`-2`) for slots whose key was deleted. The slot width grows from 1 byte to 4 or 8 bytes as the table size increases.
+- `dk_entries` — a dense array of `PyDictKeyEntry` or `PyDictUnicodeEntry` structs, each holding a key, a value, and a hash (for non-unicode keys). Entries are stored in insertion order.
+
+The lookup works in two steps. Python hashes the key, takes the low bits of the hash to find an index in `dk_indices`, then follows that index to the matching entry in `dk_entries`. If the index is `DKIX_EMPTY` or the entry does not match, a probe sequence begins.
+
+The probing algorithm (documented at `Objects/dictobject.c`, lines 280-340) uses a **perturbed pseudo-random probe**. The initial slot is `hash & mask`. On collision, the next slot is computed as:
+
+```
+j = (5 * j) + 1 + perturb
+perturb >>= PERTURB_SHIFT   # PERTURB_SHIFT = 5
+j = j & mask
+```
+
+This is neither linear probing nor quadratic probing. It is a specific design chosen because:
+- consecutive integer hash codes (`0, 1, 2, 3, ...`) map to consecutive slots on the first try, giving perfect hit rates for contiguous integer keys
+- the `perturb` variable brings the high bits of the hash into play on each successive miss, so that keys with the same home bucket spread apart quickly rather than clustering
+
+The `USABLE_FRACTION` macro (`Objects/dictobject.c`, line 403) sets the maximum load:
+
+```c
+#define USABLE_FRACTION(n) (((n) << 1) / 3)
+```
+
+That is exactly 2/3. A dict with `dk_size = 8` can hold `USABLE_FRACTION(8) = 5` entries before resizing. The resize doubles the table (growth rule is `GROWTH_RATE(d) = (d)->ma_used * 3`, which forces the next power of two above `used*3`).
+
+CPython also implements **key-sharing dictionaries** ([PEP 412](https://peps.python.org/pep-0412/), `Objects/dictobject.c` lines 90-130). When instances of the same class define attributes in the same order (as in a typical `__init__`), they share the `PyDictKeysObject` — the `dk_indices` and `dk_entries` arrays — and each instance stores only its values in a separate `ma_values` array. This saves the keys-array overhead for every instance. The requirement is stable: define the same attributes in the same order in `__init__`. Adding attributes dynamically later forces the instance into a combined-table layout, losing the sharing optimization.
+
+<Callout type="info">
+  The compact dict was introduced in CPython 3.6 and became a language guarantee in Python 3.7. Ramalho (Fluent Python, 2nd ed., Ch. 3) notes that this change saved roughly 58% memory for a typical dict compared with the old combined-table layout, and it also gave the preservation of insertion order as a side effect of the dense-entries array.
+</Callout>
 
 <SLabel>Memory cost and growth</SLabel>
 
@@ -70,7 +123,9 @@ for n in (0, 1, 5, 6, 10, 16, 32):
     print(n, sys.getsizeof(d))
 ```
 
-Those jumps exist because CPython maintains spare capacity to keep probe counts low and resizes before the table becomes too crowded. The exact thresholds are implementation detail, not a language guarantee, but the tradeoff is stable: dicts spend memory to protect lookup speed.
+Those jumps correspond to the underlying `dk_size` doubling. The minimum size is `PyDict_MINSIZE = 8` (at `Objects/dictobject.c`, line 160). A dict with one entry occupies a 8-slot table with 5 usable slots. The next resize happens at 6 entries, where the table doubles to 16 slots (10 usable), then at 11 entries to 32 slots (21 usable), and so on.
+
+The exact thresholds are implementation detail, not a language guarantee. The tradeoff is stable: dicts spend memory on spare capacity to protect lookup speed.
 
 <SLabel>Ordering and object dictionaries</SLabel>
 
@@ -104,6 +159,13 @@ Current project guidance targets Python 3.10-3.14. Insertion order is language-g
 
 The exact byte counts in this guide are CPython 3.12.3, 64-bit measurements taken locally. Different interpreters and builds may differ.
 
+Version-sensitive notes for dict internals:
+
+- compact dict (two-array layout): CPython 3.6+, language guarantee 3.7+
+- key-sharing dictionaries: [PEP 412](https://peps.python.org/pep-0412/), CPython 3.3+
+- variable-size indices (int8/int16/int32/int64): CPython 3.6+
+- free-threaded builds ([PEP 703](https://peps.python.org/pep-0703/), Python 3.13+) add atomic operations and lock-free lookup paths to dict, but the layout and probing algorithm remain the same
+
 <SLabel>Edge cases and gotchas</SLabel>
 
 Never mutate an object's equality-relevant fields after inserting it into a dict. The object may become unfindable because the table placement was based on the old hash/equality state.
@@ -127,16 +189,46 @@ print(points.get(p))
   Use immutable key objects. If the domain object is mutable, key by a stable identifier instead of the mutable object itself.
 </Callout>
 
+Another subtle collision: numeric tower equality means `1`, `1.0`, and `True` all map to the same dict slot. This is [documented behavior](https://docs.python.org/3/reference/datamodel.html) (Python data model, numeric comparison rules) but often surprises new developers.
+
+```python
+# [CURRENT - 3.10-3.14] Works on Python 3.x
+d = {}
+d[1] = "int"
+d[1.0] = "float"
+d[True] = "bool"
+print(d)  # one key remains
+```
+
 <SLabel>Production usage</SLabel>
 
 Use dicts when keyed lookup is the real operation. Do not use them as a vague replacement for every record or every small container. For membership-only workloads, a `set` usually expresses intent better and can be cheaper because there are no stored values; see <CardRef id="sets-membership-views" />.
 
 Use `defaultdict` or `setdefault` only when the "bucket per key" pattern is genuine; see <CardRef id="dict-setdefault" />.
 
+For the common pattern of looking up a key with a fallback, `dict.get(key, default)` is the right tool. It avoids an explicit membership check followed by a separate lookup, which would probe the table twice:
+
+```python
+# [CURRENT - 3.10-3.14] Works on Python 3.x
+config = {"host": "localhost"}
+
+# one probe
+port = config.get("port", 5432)
+
+# two probes — wasteful
+if "port" in config:
+    port = config["port"]
+else:
+    port = 5432
+```
+
 <SLabel>Further depth</SLabel>
 
 - [Mapping types - dict](https://docs.python.org/3/library/stdtypes.html#mapping-types-dict)
-- [Data model: object.__hash__](https://docs.python.org/3/reference/datamodel.html#object.__hash__)
+- [Data model: object.\_\_hash\_\_](https://docs.python.org/3/reference/datamodel.html#object.__hash__)
 - [What's New in Python 3.7](https://docs.python.org/3/whatsnew/3.7.html)
 - [PEP 412: Key-Sharing Dictionary](https://peps.python.org/pep-0412/)
+- [CPython source: Objects/dictobject.c](https://github.com/python/cpython/blob/main/Objects/dictobject.c)
+- [CPython developer guide: dict implementation notes](https://devguide.python.org/internals/exploring/)
 - [sys.getsizeof](https://docs.python.org/3/library/sys.html#sys.getsizeof)
+- Fluent Python, 2nd ed., Ch. 3: Dictionaries and Sets — covers the compact dict, key-sharing, and the numeric-tower hash collision pattern

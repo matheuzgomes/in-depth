@@ -1,4 +1,4 @@
-`asyncio` is Python's cooperative concurrency framework for I/O-bound work. It does not make CPU-bound Python code parallel by itself; it lets one thread keep making progress while tasks are waiting.
+[`asyncio`](https://docs.python.org/3/library/asyncio.html) is Python's cooperative concurrency framework for I/O-bound work. It does not make CPU-bound Python code parallel by itself; it lets one thread keep making progress while tasks are waiting.
 
 <SLabel>Core answer</SLabel>
 
@@ -125,7 +125,7 @@ Use the one whose semantics match the operation.
 
 <SLabel>Production usage</SLabel>
 
-Use:
+Use ──────────────────────────────────────────────
 
 - `TaskGroup` for "these subtasks belong to one request"
 - `gather()` for "I need these results collected"

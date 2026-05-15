@@ -81,6 +81,58 @@ print(tuple_total)  # 360 on CPython 3.12.3, 64-bit
 
 The `16`-byte gap remains because the element objects are identical in both cases; only the container representation differs.
 
+<SLabel>CPython internals</SLabel>
+
+**List implementation** (`Objects/listobject.c`). The `PyListObject` struct (Python 3.12) contains:
+
+```c
+typedef struct {
+    PyObject_VAR_HEAD
+    PyObject **ob_item;
+    Py_ssize_t allocated;
+} PyListObject;
+```
+
+- `ob_size` (inherited from `PyObject_VAR_HEAD`) is the logical length — what `len()` returns
+- `allocated` is the number of slots reserved in `ob_item`
+- `ob_item` is a separately allocated `PyObject**` array
+
+When a list grows beyond `allocated`, `list_resize()` reallocates `ob_item`. The overallocation formula in CPython 3.12 (`Objects/listobject.c`, `list_resize`) is:
+
+```c
+new_allocated = (size_t)newsize + (newsize >> 3) + (newsize < 9 ? 3 : 6);
+```
+
+This means a list of 1000 elements has about `1000 + 125 + 6 = 1131` allocated slots — about 13% spare capacity. The spare capacity protects append performance at the cost of extra memory.
+
+**Tuple implementation** (`Objects/tupleobject.c`). The `PyTupleObject` struct contains:
+
+```c
+typedef struct {
+    PyObject_VAR_HEAD
+    PyObject *ob_item[1];
+} PyTupleObject;
+```
+
+The `ob_item` array is allocated inline as part of the tuple object itself (flexible array member in C99 terms). There is no separate allocation, no spare capacity, and the size is fixed at creation. This is why `sys.getsizeof(tuple(range(1000)))` reports exactly `40 + 8*1000 = 8040` bytes — the entire object is one contiguous memory block.
+
+**Copy elision.** CPython optimizes `tuple(t)` where `t` is already a tuple. The `PyTuple_Type`'s `tp_new` implementation checks whether the argument is already a tuple and simply returns the same object (with incremented reference count). This is safe because tuples are immutable. The list version always creates a new list.
+
+```python
+# [CURRENT - 3.10-3.14] Works on Python 3.x
+t = (1, 2, 3)
+l = [1, 2, 3]
+
+print(tuple(t) is t)  # True -> same object reused
+print(list(l) is l)   # False -> new list created
+```
+
+**Constant folding.** The compiler (`Python/compile.c`) folds tuple literals of constants into a single code-object constant. A function returning `(1, 2, 3)` uses `RETURN_CONST` to return the pre-built tuple. A function returning `[1, 2, 3]` must build the list at runtime because lists are mutable.
+
+<Callout type="info">
+  Ramalho (Fluent Python, 2nd ed., Ch. 2) calls this the "tuple as record" vs "tuple as immutable list" duality. The tuple-as-record pattern uses positional unpacking and field names via <code>NamedTuple</code>. The tuple-as-immutable-list pattern is what most programmers reach for when they need an unchangeable sequence. The CPython allocation optimization (one contiguous block) is a bonus, not the primary design goal.
+</Callout>
+
 <SLabel>Allocation and performance</SLabel>
 
 The main reason lists cost more is not just the larger base header. It is the resizing strategy. CPython over-allocates list capacity so repeated `append()` is amortized `O(1)` instead of reallocating on every push. Tuples do not need that mechanism because they never grow.
@@ -212,3 +264,6 @@ If the shape needs field names, not positional indexing, prefer `NamedTuple` or 
 - [sys.getsizeof](https://docs.python.org/3/library/sys.html#sys.getsizeof)
 - [dis module](https://docs.python.org/3/library/dis.html)
 - [Data model: objects, values, and types](https://docs.python.org/3/reference/datamodel.html#objects-values-and-types)
+- [CPython source: Objects/listobject.c](https://github.com/python/cpython/blob/main/Objects/listobject.c)
+- [CPython source: Objects/tupleobject.c](https://github.com/python/cpython/blob/main/Objects/tupleobject.c)
+- Fluent Python, 2nd ed., Ch. 2: An Array of Sequences — covers list overallocation, tuple layout, and the "tuple as record" pattern

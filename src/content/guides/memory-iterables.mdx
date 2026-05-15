@@ -59,6 +59,25 @@ def chunks(lines):
 
 In that example, `buffer` remains alive inside the suspended generator between `yield` points.
 
+<SLabel>CPython internals</SLabel>
+
+On CPython, generators are implemented as a special kind of frame object attached to a generator object (`Objects/genobject.c`). When a generator function is called, Python does not execute any of the function body. Instead, it creates a `PyGenObject` that holds:
+
+- a reference to the function's code object (`gi_code`)
+- a reference to the function's frame (`gi_frame`), which contains the local variables, the stack, the instruction pointer, and the block stack
+- the running/suspended/finished state (`gi_running`)
+- the current instruction offset (the `f_lasti` field in the frame)
+
+When `next(gen)` is called, CPython's evaluation loop (`Python/ceval.c`) resumes execution of the frame from the last suspended position (stored in `f_lasti`). The frame's local variables, including `buffer` in the example above, remain allocated in the frame's fast-locals array. That is why a suspended generator's memory includes all referenced objects reachable from its locals.
+
+This is fundamentally different from a container or a flat sequence. A list of `n` items allocates all `n` references immediately. A generator that yields `n` items allocates only the generator object and its frame (typically a few hundred bytes on CPython 3.12), regardless of how many items it will produce.
+
+The `gi_frame.yieldfrom` field (or `cr_frame.yieldfrom` for coroutines) tracks the sub-iterator when `yield from` is used, creating a chain of suspended frames.
+
+<Callout type="info">
+  Ramalho (Fluent Python, 2nd ed., Ch. 17) emphasizes that generator-based coroutines and native coroutines both rely on this same suspension model. The frame is the "suspension unit" — the language creates one frame per active generator, and the frame's liveness determines the memory footprint. The <code>yield from</code> construct (and <code>await</code> in native coroutines) chains these frames together without additional allocation.
+</Callout>
+
 <SLabel>Container, flat, and streaming models</SLabel>
 
 There are three materially different storage models:
@@ -83,6 +102,12 @@ If you turn a stream into `list(stream)`, you trade the streaming model for full
 <SLabel>Version context</SLabel>
 
 The iterator protocol and generator semantics are stable Python 3 behavior. Modern type hints often use `collections.abc.Iterable`, `Iterator`, and `Sequence`. Current project guidance targets Python 3.10-3.14. Python 3.9 and below are End-of-Life.
+
+CPython-specific notes:
+
+- the generator frame layout is defined in `Include/internal/pycore_frame.h`
+- the generator object is defined in `Objects/genobject.c`
+- the frame's `f_lasti` field tracks the precise instruction offset for resumption
 
 <SLabel>Edge cases and gotchas</SLabel>
 
@@ -143,3 +168,6 @@ For compact storage choices, see <CardRef id="memory-list-alternatives" />. For 
 - [Yield expressions](https://docs.python.org/3/reference/expressions.html#yield-expressions)
 - [collections.abc](https://docs.python.org/3/library/collections.abc.html)
 - [itertools.tee](https://docs.python.org/3/library/itertools.html#itertools.tee)
+- [CPython source: Objects/genobject.c](https://github.com/python/cpython/blob/main/Objects/genobject.c)
+- [CPython source: Python/ceval.c](https://github.com/python/cpython/blob/main/Python/ceval.c)
+- Fluent Python, 2nd ed., Ch. 17: Iterables, Iterators, and Generators — covers the iterator protocol, generator suspension mechanics, and `yield from`

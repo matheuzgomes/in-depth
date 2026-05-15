@@ -55,6 +55,35 @@ for n in (0, 1, 4, 5, 16, 32):
 
 That overhead is the price of near-constant-time membership.
 
+The set base object (`216` bytes for an empty set on CPython 3.12) is much larger than a dict (`64` bytes) because the set object includes inline hash table arrays even at minimum size. Fluent Python (Ramalho, 2022, Ch. 3) notes that sets make this tradeoff deliberately: they optimize for the membership workload, not for compact empty-state storage.
+
+<SLabel>CPython internals</SLabel>
+
+CPython implements sets using the same underlying hash table machinery as dicts. The set type (`PySetObject`) is defined in `Objects/setobject.c`. Unlike dicts, sets store only keys — there are no associated values. The hash table uses the same probing algorithm and the same load-factor policy.
+
+The set object contains:
+
+- a pointer to the hash table entries (an array of `PyObject*` for keys)
+- a separate hash array (`Py_hash_t*`) stored alongside the entries for fast rehashing and resize operations
+- `used` and `fill` counters that track how many slots are occupied (used) versus ever occupied (fill, which includes dummy entries from deleted elements)
+
+The probing formula for sets uses the same perturb algorithm as dicts (`Objects/setobject.c`):
+
+```
+j = (5 * j) + 1 + perturb
+perturb >>= PERTURB_SHIFT
+```
+
+The minimum set size on CPython 3.12 is `PySet_MINSIZE = 8` slots, and the load factor uses `USABLE_FRACTION = 2/3`, just like dicts.
+
+A key difference from dict: sets track a separate `hash` array in addition to the entries. This means set resizing involves rehashing every element, not just re-indexing, because the set may need to reorganize entries based on hash values. This is one reason why set resizing tends to be more expensive than dict resizing for the same number of elements — the set must compute and store hash arrays, while dicts can use the hash from the key object itself.
+
+When you call `set()` on an iterable, CPython calls `set_update_iterable` in `Objects/setobject.c` (Python 3.12), which iterates the source and inserts each element one at a time. The `frozenset` constructor does the same but returns an immutable wrapper around the same hash table, with no add/discard methods.
+
+<Callout type="info">
+  Ramalho (Fluent Python, 2nd ed., Ch. 3) emphasizes that <code>frozenset</code> is not just an immutable set — it is hashable, which means it can be used as a dict key or set element. This is its primary practical advantage over mutable <code>set</code>, not just the immutability.
+</Callout>
+
 <SLabel>Set algebra and API edges</SLabel>
 
 Sets support the expected algebra directly:
@@ -101,7 +130,7 @@ extra = payload.keys() - expected
 print(missing, extra)
 ```
 
-One subtle but important distinction from ordinary sets: the official docs note that set-like dictionary views accept **any iterable** as the other operand for set operators. That makes view algebra surprisingly ergonomic.
+One subtle but important distinction from ordinary sets: the Python docs note that set-like dictionary views accept **any iterable** as the other operand for set operators. That makes view algebra surprisingly ergonomic.
 
 ```python
 # [CURRENT - 3.10-3.14] Works on Python 3.x
@@ -109,9 +138,17 @@ d = {"a": 1, "b": 2}
 print(d.keys() | ["b", "c", "c"])
 ```
 
+This works because the view's `__or__` method builds a set from `self` and then calls `.union()` with the other operand, which accepts any iterable. The view itself is not a set — it is a live projection of the dict's current keys — but the set operators on views produce real set objects as results.
+
 <SLabel>Version context</SLabel>
 
 Set types and dictionary views are stable Python 3 features. Dictionary insertion order is guaranteed in Python 3.7+. Dictionary views became reversible in Python 3.8. The `.mapping` attribute on views was added in Python 3.10. Python 3.9 and below are End-of-Life.
+
+CPython-specific notes:
+
+- the empty-set memory footprint (`216` bytes on CPython 3.12) is an implementation detail; other interpreters may differ
+- the probing algorithm and load factor may change across CPython releases
+- source for set internals: `Objects/setobject.c`
 
 <SLabel>Edge cases and gotchas</SLabel>
 
@@ -146,5 +183,8 @@ When each key needs associated data, move back to dictionaries; see <CardRef id=
 
 - [Set types: set and frozenset](https://docs.python.org/3/library/stdtypes.html#set-types-set-frozenset)
 - [Dictionary view objects](https://docs.python.org/3/library/stdtypes.html#dictionary-view-objects)
-- [Data model: object.__hash__](https://docs.python.org/3/reference/datamodel.html#object.__hash__)
+- [Data model: object.\_\_hash\_\_](https://docs.python.org/3/reference/datamodel.html#object.__hash__)
+- [CPython source: Objects/setobject.c](https://github.com/python/cpython/blob/main/Objects/setobject.c)
+- [PEP 412: Key-Sharing Dictionary](https://peps.python.org/pep-0412/)
 - [sys.getsizeof](https://docs.python.org/3/library/sys.html#sys.getsizeof)
+- Fluent Python, 2nd ed., Ch. 3: Dictionaries and Sets — covers the set hash table, frozenset hashability, and set algebra patterns

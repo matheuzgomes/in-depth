@@ -4,7 +4,7 @@ Python bytecode is the instruction stream CPython executes after compiling sourc
 
 <SLabel>Core answer</SLabel>
 
-Use the `dis` module when you need to answer questions like:
+Use the [`dis`](https://docs.python.org/3/library/dis.html) module when you need to answer questions like:
 
 - which names are loaded as locals, globals, or closure cells?
 - is this loop doing repeated attribute lookup and Python-level calls?
@@ -99,6 +99,47 @@ On current CPython, that closure read shows up as `LOAD_DEREF`, while a plain lo
 
 See also <CardRef id="language-decorators-closures" /> for the scope side of the same mechanism.
 
+<SLabel>CPython internals</SLabel>
+
+**The evaluation loop** (`Python/ceval.c`). CPython's bytecode interpreter is a massive switch statement inside `_PyEval_EvalFrameDefault`. Each opcode is a `case` label. The loop:
+
+1. reads the next instruction from `f->f_lasti` (the instruction pointer in the current frame)
+2. decodes the opcode and its argument
+3. dispatches to the matching `case`
+4. advances `f_lasti` and repeats
+
+**Inline caching and adaptive specialization (CPython 3.11+, [PEP 659](https://peps.python.org/pep-0659/)).** Starting in Python 3.11, CPython added a specializing adaptive interpreter. Opcodes like `LOAD_ATTR`, `LOAD_GLOBAL`, `BINARY_OP`, and `CALL` are "adaptive" — on their first execution, they behave as generic versions. After enough executions (warm-up), CPython replaces them with specialized versions (e.g., `LOAD_ATTR` becomes `LOAD_ATTR_SLOT` for slot-based attribute access). This is why CPython 3.11+ code can show different bytecode on the first run vs. after warm-up.
+
+You can inspect specialization caches with `dis.dis(func, show_caches=True, adaptive=True)`:
+
+```python
+# [CURRENT - 3.11-3.14] Requires Python 3.11+ [PEP 659]
+import dis
+
+def total(xs):
+    return sum(xs)
+
+dis.dis(total, show_caches=True, adaptive=True)
+```
+
+The cache entries show up as inline metadata between opcodes. They are not real opcodes — they are data slots that the specializing interpreter uses to track type observations and specialized replacement targets.
+
+**Opcode encoding.** In CPython 3.12, each instruction is 2 bytes: 1 byte for the opcode, 1 byte for the argument (or a 2-byte extended argument if `EXTENDED_ARG` precedes it). The opcode range is 0–255, with `HAVE_ARGUMENT` (90) as the boundary between opcodes that take no argument and those that do.
+
+**The frame execution model.** Each function call creates a frame (`PyFrameObject` in `Objects/frameobject.c`). The frame holds:
+
+- `f_locals` — the fast-locals array (not a dict, just a C array of `PyObject*`)
+- `f_globals` — a reference to the module's global dict
+- `f_builtins` — a reference to the builtins dict
+- `f_lasti` — the instruction pointer (offset into the bytecode)
+- `f_valuestack` — the evaluation stack, a contiguous array of `PyObject*`
+
+This is why local variable access is fast: `LOAD_FAST` is a direct C array access by index, while `LOAD_GLOBAL` requires a dict lookup and `LOAD_DEREF` requires following a chain of closure cell objects.
+
+<Callout type="info">
+  Ramalho (Fluent Python, 2nd ed., Ch. 23) describes bytecode as "the C level you can read from Python." The <code>dis</code> module is the bridge between high-level syntax and the interpreter's execution model. He recommends using it diagnostically — to answer a specific question about execution shape — rather than as a routine optimization tool.
+</Callout>
+
 <SLabel>How to use the dis module</SLabel>
 
 The two most useful entry points are:
@@ -184,7 +225,7 @@ The same style of reasoning helps with:
 - closure access (`LOAD_DEREF`)
 - dedicated matching opcodes in structural pattern matching
 
-See:
+See ──────────────────────────────────────────────
 
 - <CardRef id="sequences-pattern-matching" />
 - <CardRef id="memory-tuples-lists" />
@@ -193,7 +234,7 @@ See:
 
 This is the production trap. Bytecode can explain overhead, but it does **not** fully explain runtime cost.
 
-Reasons:
+Reasons ──────────────────────────────────────────
 
 - the expensive part may be C-level work inside a builtin or extension
 - allocation and object creation may dominate
@@ -232,7 +273,7 @@ Current project guidance targets Python 3.10-3.14. Python 3.9 and below are End-
 Important version facts:
 
 - `dis` has existed for a long time, so basic disassembly examples are stable Python 3 material
-- CPython 3.11 introduced the specializing adaptive interpreter [PEP 659]
+- CPython 3.11 introduced the specializing adaptive interpreter [PEP 659](https://peps.python.org/pep-0659/)
 - exact opcode names, cache layout, jump shapes, and disassembly formatting changed materially in 3.11+
 - code that inspects bytecode text output should be treated as version-sensitive tooling
 
@@ -298,4 +339,7 @@ Good production practice:
 - [Data model: code objects](https://docs.python.org/3/reference/datamodel.html#code-objects)
 - [Execution model](https://docs.python.org/3/reference/executionmodel.html)
 - [CPython Developer Guide](https://devguide.python.org/internals/interpreter/)
+- [CPython source: Python/ceval.c](https://github.com/python/cpython/blob/main/Python/ceval.c)
+- [CPython source: Objects/frameobject.c](https://github.com/python/cpython/blob/main/Objects/frameobject.c)
 - [PEP 659: Specializing Adaptive Interpreter](https://peps.python.org/pep-0659/)
+- Fluent Python, 2nd ed., Ch. 23: Attribute Descriptors and the `__getattr__` protocol (includes bytecode-level discussion of attribute access patterns)

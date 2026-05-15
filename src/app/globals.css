@@ -4296,7 +4296,7 @@ pre {
 .whiteboard-measured-stack .whiteboard-side-copy,
 .whiteboard-measured-stack .whiteboard-side-copy--compact {
   font-family: var(--font-board-body);
-  font-size: 14px;
+  font-size: 16px;
   line-height: 1.5;
   color: #1f2937;
 }
@@ -4427,6 +4427,61 @@ pre {
   font-size: 12px;
   line-height: 1.5;
   color: #334155;
+}
+
+.whiteboard-winner-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-left: 3px solid;
+  padding: 8px 10px;
+  margin: 8px 0;
+  background: rgba(26, 46, 110, 0.05);
+  border-radius: 0 4px 4px 0;
+  font-family: var(--font-board-body);
+}
+
+.whiteboard-winner-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #1a2e6e;
+}
+
+.whiteboard-winner-text {
+  font-size: 14px;
+  line-height: 1.4;
+  color: #1f2937;
+}
+
+.whiteboard-side-card--ref {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.whiteboard-prose-notes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.whiteboard-note-paragraph {
+  font-family: var(--font-board-body);
+  font-size: 16px;
+  line-height: 1.58;
+  color: #1f2937;
+  margin: 0;
+}
+
+.whiteboard-note-paragraph strong {
+  color: #102a63;
+}
+
+.whiteboard-note-paragraph--empty {
+  color: #475569;
+  font-style: italic;
 }
 
 .whiteboard-topic-description {

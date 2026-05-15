@@ -54,22 +54,24 @@ Without it, CPython needs more fine-grained thread-safety machinery around:
 
 That is exactly why free-threaded CPython is a major interpreter project rather than a tiny switch.
 
-<SLabel>How it works at runtime</SLabel>
+<SLabel>CPython internals</SLabel>
 
-At a high level, a thread running Python code needs the interpreter's attached thread state, which in regular builds effectively means it must hold the GIL for that interpreter.
+The GIL is implemented in `Python/ceval.c` (the main evaluation loop) and `Python/pystate.c` (the thread state management). In the standard CPython build (`Py_GIL_DISABLED` not defined), the evaluation loop acquires the GIL before executing bytecode and releases it during blocking operations.
 
-In practice, this means:
+**Acquisition model.** CPython uses a periodic-check approach. The GIL is not released after every bytecode instruction. Instead, the evaluation loop checks a `_Py_atomic_load` of the `gil_drop_request` flag at configurable intervals. The default check interval is determined by `sys.setswitchinterval()` (default: 5 milliseconds on CPython 3.12). When a waiting thread sets this flag, the running thread releases the GIL after completing its current "tick" of bytecode execution.
 
-- one thread runs Python bytecode
-- another Python thread may be ready, but it cannot run bytecode until the current thread yields the lock or blocks
-- while a thread is in blocking I/O or certain native-code sections, the GIL can be released so another thread can run
+**Release points.** The GIL is explicitly released in these situations (`Python/ceval.c` and `Python/thread.c`):
+
+- before any blocking I/O call (file read/write, socket operations, `time.sleep()`)
+- during computationally intensive native code in some extension modules (e.g., hashing, compression, regex matching)
+- when `Py_BEGIN_ALLOW_THREADS` / `Py_END_ALLOW_THREADS` macros are used in C extensions
 
 This is why the right mental model is:
 
 - threads are still concurrent
 - but Python bytecode execution in one interpreter is serialized by the GIL in the regular build
 
-The interpreter also has a thread switch interval:
+**The switch interval:**
 
 ```python
 # [CURRENT - 3.10-3.14] Works on Python 3.x
@@ -79,6 +81,12 @@ print(sys.getswitchinterval())
 ```
 
 That interval is not a promise of exact fairness or exact timing. It is a runtime tuning knob for how often Python threads are given a chance to switch, and the actual scheduling still depends on the operating system and on whether the current thread reaches a point where switching can happen.
+
+**Per-interpreter GIL ([PEP 684](https://peps.python.org/pep-0684/), Python 3.12+).** Starting in Python 3.12, CPython supports `Py_NewInterpreter()` creating sub-interpreters that each have their own GIL. This is implemented in `Python/pystate.c` — the GIL is stored per-interpreter in the `PyInterpreterState` struct, so threads running in different interpreters do not contend for the same lock. `InterpreterPoolExecutor` (Python 3.14) provides a high-level API for this.
+
+<Callout type="info">
+  Ramalho (Fluent Python, 2nd ed., Ch. 19) emphasizes distinguishing "concurrency" (dealing with many things at once) from "parallelism" (doing many things at once). The GIL makes this distinction concrete: threads provide concurrency for I/O-bound work but not parallelism for CPU-bound Python bytecode. Ramalho recommends processes, not threads, for CPU-bound parallelism in the regular CPython build.
+</Callout>
 
 <SLabel>What the GIL does and does not guarantee</SLabel>
 
@@ -205,7 +213,7 @@ The free-threaded story is therefore not:
 The real story is:
 
 - CPython now has an evolving opt-in build configuration where the GIL can be disabled
-- making that safe requires substantial internal runtime changes
+- making that safe requires substantial internal runtime changes, including per-object locking, biased reference counting, and quiescent-state-based reclamation (QSBR) in `Objects/object.c`
 - deployment, extension compatibility, and single-thread costs still matter
 
 <SLabel>Version context</SLabel>
@@ -269,3 +277,6 @@ When performance matters:
 - [Python support for free threading](https://docs.python.org/3/howto/free-threading-python.html)
 - [PEP 684: A Per-Interpreter GIL](https://peps.python.org/pep-0684/)
 - [PEP 703: Making the Global Interpreter Lock Optional in CPython](https://peps.python.org/pep-0703/)
+- [CPython source: Python/ceval.c](https://github.com/python/cpython/blob/main/Python/ceval.c)
+- [CPython source: Python/pystate.c](https://github.com/python/cpython/blob/main/Python/pystate.c)
+- Fluent Python, 2nd ed., Ch. 19: Concurrency Models in Python — covers the GIL, threads, processes, and when each model wins

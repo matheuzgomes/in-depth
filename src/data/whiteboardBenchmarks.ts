@@ -41,6 +41,8 @@ export interface WhiteboardBenchmarkPreset {
   series: WhiteboardBenchmarkSeries[]
   metrics: WhiteboardBenchmarkMetric[]
   notes: string[]
+  guideRef?: string
+  winner?: { label: string; detail: string }
 }
 
 export interface WhiteboardBenchmarkTopic {

@@ -53,6 +53,52 @@ That is why built-ins and syntax stay uniform:
 
 This is also why implementing a dunder method is not cosmetic. You are defining part of the public semantics of the type.
 
+<SLabel>CPython internals</SLabel>
+
+**Special method lookup** bypasses the normal instance-attribute lookup (`__getattribute__`) in most cases. Instead, CPython looks up the method **on the type**, not the instance (`Objects/typeobject.c`, `_Py_lookup_special`). This is documented in the [Python data model](https://docs.python.org/3/reference/datamodel.html) (Ch. 3): "The implementation works through a prototype chain, looking for the method in the type hierarchy."
+
+For example, when Python sees `len(obj)`, the `len()` built-in calls `type(obj).__len__(obj)`. It does NOT call `obj.__len__()`. This distinction matters because it means special methods defined on the instance rather than the class are invisible to the interpreter's dispatch logic.
+
+```python
+# [CURRENT - 3.10-3.14] Works on Python 3.x
+class A:
+    def __len__(self):
+        return 42
+
+obj = A()
+print(len(obj))  # 42
+
+# Instance-level __len__ is NOT found by len()
+class B:
+    pass
+
+obj = B()
+obj.__len__ = lambda: 42
+try:
+    print(len(obj))  # TypeError
+except TypeError as exc:
+    print(exc)
+```
+
+This type-level lookup is implemented via the `tp_as_number`, `tp_as_sequence`, `tp_as_mapping`, and similar slots in `PyTypeObject`. Each slot is a struct of function pointers. When you define `__len__` in Python, CPython sets the `sq_length` slot in `tp_as_sequence`. When `len()` is called, CPython calls `sq_length` directly without going through `__getattribute__`.
+
+**The `__eq__` dispatch path.** When Python evaluates `a == b`:
+
+1. If `b` is a subtype of `a`'s type, CPython may try `b.__eq__(a)` first (the subtype rule)
+2. Otherwise, try `a.__eq__(b)`
+3. If `a.__eq__` returns `NotImplemented`, try `b.__eq__(a)` (reflected operation)
+4. If both return `NotImplemented`, CPython falls back to identity comparison (`a is b`)
+
+This is why `NotImplemented` is important: it is the signal that the type does not know how to handle the comparison, and the interpreter should try the other operand rather than silently returning `False`.
+
+**The `__hash__` / `__eq__` relationship.** When you define `__eq__` in a class, Python automatically sets `__hash__ = None` unless you also define `__hash__`. This is enforced at the type level in `type.__new__` (`Objects/typeobject.c`). If a class has `__hash__ = None`, `hash(obj)` raises `TypeError`, and the instance cannot be used as a dict key or set element.
+
+**The `__iter__` fallback.** CPython's `iter()` built-in (`Python/bltinmodule.c`) first tries `__iter__` via `tp_iter`. If that slot is `NULL` (no `__iter__` defined), CPython falls back to `__getitem__` via `sq_item`, constructing a `PySeqIter_Type` iterator that calls `__getitem__` with increasing integer indices until `IndexError`.
+
+<Callout type="info">
+  Ramalho (Fluent Python, 2nd ed., Ch. 11) describes Python's protocol mechanism as "duck typing at the syntax level." The language does not require formal interface declarations. If a class implements <code>__len__</code> and <code>__getitem__</code>, it is a sequence. If it implements <code>__enter__</code> and <code>__exit__</code>, it is a context manager. This design reduces ceremony compared with formal interface systems found in Java or Go.
+</Callout>
+
 <SLabel>Most used special methods</SLabel>
 
 The most important ones in ordinary production code are:
@@ -338,8 +384,11 @@ For related content:
 <SLabel>Further depth</SLabel>
 
 - [Data model: special method names](https://docs.python.org/3/reference/datamodel.html#special-method-names)
-- [Data model: object.__hash__](https://docs.python.org/3/reference/datamodel.html#object.__hash__)
+- [Data model: object.\_\_hash\_\_](https://docs.python.org/3/reference/datamodel.html#object.__hash__)
 - [Built-in functions: repr](https://docs.python.org/3/library/functions.html#repr)
 - [Built-in functions: len](https://docs.python.org/3/library/functions.html#len)
 - [Iterator types](https://docs.python.org/3/library/stdtypes.html#iterator-types)
 - [Context manager types](https://docs.python.org/3/reference/datamodel.html#context-managers)
+- [CPython source: Objects/typeobject.c](https://github.com/python/cpython/blob/main/Objects/typeobject.c)
+- [CPython source: Python/bltinmodule.c](https://github.com/python/cpython/blob/main/Python/bltinmodule.c)
+- Fluent Python, 2nd ed., Ch. 11: Special Methods and Protocols — covers the protocol-driven design, the type-level lookup mechanism, and the full protocol table

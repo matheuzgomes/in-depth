@@ -4,6 +4,7 @@ import type { ComponentType, ReactNode } from "react"
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react"
 import { AnimatePresence, motion } from "framer-motion"
 import { Menu, Search, X } from "lucide-react"
+import { CardRef } from "@/components/navigation/CardRef"
 import { NavContext } from "@/components/navigation/NavContext"
 import { RoughPythonMark } from "@/components/whiteboard/RoughPythonMark"
 import { RoughVisualDiagram } from "@/components/whiteboard/RoughVisualDiagram"
@@ -436,7 +437,6 @@ export function WhiteboardExperience({
             </div>
           </div>
 
-          <MarkerTray />
         </div>
 
         <AnimatePresence>
@@ -663,6 +663,16 @@ function TopicNotesPanel({
   )
 }
 
+function renderNoteBold(text: string) {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g)
+  return parts.map((part, i) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return <strong key={i}>{part.slice(2, -2)}</strong>
+    }
+    return part
+  })
+}
+
 function MeasuredNotebookPanel({ topic }: { topic: WhiteboardBenchmarkTopic }) {
   const [selection, setSelection] = useState<Record<string, string>>(topic.defaultSelection)
   const presetKey = topic.controls.length === 0
@@ -674,6 +684,20 @@ function MeasuredNotebookPanel({ topic }: { topic: WhiteboardBenchmarkTopic }) {
     <div className="whiteboard-measured-stack">
       <div className="whiteboard-sim-title">{topic.title}</div>
       <p className="whiteboard-side-copy whiteboard-side-copy--compact">{topic.summary}</p>
+
+      {preset.winner ? (
+        <div className="whiteboard-winner-banner" style={{ borderLeftColor: MARKER_COLORS.navy }}>
+          <span className="whiteboard-winner-label">Winner</span>
+          <span className="whiteboard-winner-text"><strong>{preset.winner.label}</strong> — {preset.winner.detail}</span>
+        </div>
+      ) : null}
+
+      {preset.guideRef ? (
+        <div className="whiteboard-side-card whiteboard-side-card--ref">
+          <div className="whiteboard-control-header">RELATED GUIDE</div>
+          <CardRef id={preset.guideRef} />
+        </div>
+      ) : null}
 
       <BenchmarkChart preset={preset} />
 
@@ -698,23 +722,25 @@ function MeasuredNotebookPanel({ topic }: { topic: WhiteboardBenchmarkTopic }) {
 
       <div className="whiteboard-metrics-block">
         <div className="whiteboard-control-header">METRICS</div>
-        <div className="whiteboard-metric-card-grid">
-          {preset.metrics.map((metric) => (
-            <div key={metric.label} className="whiteboard-metric-card">
-              <span>{metric.label}</span>
-              <strong>{metric.value}</strong>
-            </div>
-          ))}
-        </div>
+        {preset.metrics.length > 0 ? (
+          <div className="whiteboard-metric-card-grid">
+            {preset.metrics.map((metric) => (
+              <div key={metric.label} className="whiteboard-metric-card">
+                <span>{metric.label}</span>
+                <strong>{metric.value}</strong>
+              </div>
+            ))}
+          </div>
+        ) : null}
       </div>
 
       <div className="whiteboard-side-card">
         <div className="whiteboard-control-header">NOTES</div>
-        <ul className="whiteboard-dot-list whiteboard-dot-list--notes">
-          {preset.notes.map((note) => (
-            <li key={note}>{note}</li>
-          ))}
-        </ul>
+        <div className="whiteboard-prose-notes">
+          {preset.notes.length > 0 ? preset.notes.map((note, i) => (
+            <p key={i} className="whiteboard-note-paragraph">{renderNoteBold(note)}</p>
+          )) : <p className="whiteboard-note-paragraph whiteboard-note-paragraph--empty">No notes for this preset.</p>}
+        </div>
       </div>
 
       <div className="whiteboard-side-card whiteboard-side-card--env">
@@ -1138,32 +1164,4 @@ function Squiggle({ color, className }: { color: string; className?: string }) {
   )
 }
 
-function MarkerTray() {
-  const markers = [
-    { color: MARKER_COLORS.black, rotate: -3, tip: false },
-    { color: MARKER_COLORS.navy, rotate: 2, tip: false },
-    { color: MARKER_COLORS.red, rotate: -1, tip: false },
-    { color: MARKER_COLORS.green, rotate: 3, tip: false },
-    { color: MARKER_COLORS.purple, rotate: -4, tip: true },
-  ]
 
-  return (
-    <div className="whiteboard-tray" aria-hidden="true">
-      <div className="whiteboard-tray-rail" />
-      <div className="whiteboard-markers">
-        {markers.map((marker, index) => (
-          <div key={`${marker.color}-${index}`} className="whiteboard-marker" style={{ ["--marker-color" as string]: marker.color, rotate: `${marker.rotate}deg` }}>
-            <div className="whiteboard-marker-cap" />
-            <div className="whiteboard-marker-body">
-              <span>EXPO</span>
-            </div>
-            {marker.tip ? <div className="whiteboard-marker-tip" /> : <div className="whiteboard-marker-cap end" />}
-          </div>
-        ))}
-      </div>
-      <div className="whiteboard-eraser">
-        <span>EXPO</span>
-      </div>
-    </div>
-  )
-}
