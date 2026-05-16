@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
 :root {
+  tab-size: 2;
   --bg0: #0a0a0d;
   --bg1: #14131b;
   --bg2: #1a1820;
@@ -1420,6 +1421,12 @@ pre {
   color: var(--text2);
 }
 
+.book-article li > ul,
+.book-article li > ol {
+  margin: 4px 0 0;
+  padding-left: 1rem;
+}
+
 .book-article strong {
   color: #7c3aed !important;
 }
@@ -2510,23 +2517,31 @@ pre {
 
 .whiteboard-topic-rows {
   display: grid;
-  gap: 2px;
-  padding: 6px 6px 1px 12px;
-  overflow: hidden;
+  gap: 4px;
+  padding: 6px 8px 2px 12px;
+  overflow: visible;
 }
 
 .whiteboard-topic-row {
   position: relative;
   display: grid;
-  grid-template-columns: 12px 32px minmax(0, 1fr) auto;
+  grid-template-columns: 10px 3.2ch minmax(0, 1fr) 18px;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
+  min-height: 28px;
   text-align: left;
   cursor: pointer;
   font-family: var(--font-board-body);
   font-size: 13px;
   color: #8f2f22;
-  padding: 2px 0;
+  padding: 3px 2px;
+  isolation: isolate;
+}
+
+.whiteboard-topic-row>* {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
 }
 
 .whiteboard-topic-row.is-active {
@@ -2536,13 +2551,16 @@ pre {
 .whiteboard-topic-row.is-active::after {
   content: "";
   position: absolute;
-  inset: -1px -4px;
+  inset: -2px -5px;
+  z-index: 0;
   border: 2px solid rgba(192, 57, 43, 0.95);
   border-radius: 50%;
   filter: url(#softWobble);
+  pointer-events: none;
 }
 
 .whiteboard-topic-bullet {
+  justify-self: center;
   width: 8px;
   height: 8px;
   border-radius: 999px;
@@ -2552,16 +2570,28 @@ pre {
 
 
 .whiteboard-topic-number {
+  min-width: 0;
   text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
 .whiteboard-topic-title {
+  min-width: 0;
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .whiteboard-topic-arrow {
-  padding-right: 4px;
+  display: grid;
+  place-items: center;
+  justify-self: end;
+  width: 18px;
+  min-width: 18px;
+  height: 100%;
+  padding-right: 0;
+  line-height: 1;
+  transform: translateY(-1px);
 }
 
 .whiteboard-search {
@@ -3413,6 +3443,24 @@ pre {
   box-shadow: 0 18px 42px rgba(0, 0, 0, 0.18);
 }
 
+.guide-reader-article ul,
+.guide-reader-article ol {
+  padding-left: 1.25rem;
+  margin: 0 0 16px;
+}
+
+.guide-reader-article li {
+  margin-bottom: 6px;
+  line-height: 1.82;
+  color: var(--text2);
+}
+
+.guide-reader-article li > ul,
+.guide-reader-article li > ol {
+  margin: 4px 0 0;
+  padding-left: 1rem;
+}
+
 .guide-reader-sidebar {
   display: grid;
   gap: 14px;
@@ -4148,6 +4196,12 @@ pre {
   font-family: var(--font-board-body);
 }
 
+.whiteboard-guide-article li > ul,
+.whiteboard-guide-article li > ol {
+  margin: 4px 0 0;
+  padding-left: 1rem;
+}
+
 .whiteboard-guide-article p {
   margin: 6px 0 !important;
   font-size: 18px;
@@ -4651,23 +4705,45 @@ pre {
 .whiteboard-visual-overlay {
   align-items: center;
   overflow-y: auto;
+  padding: clamp(14px, 3vw, 28px);
 }
 
 .whiteboard-visual-card {
   width: min(900px, calc(100vw - 48px));
+  max-height: calc(100dvh - 48px);
   border-radius: 20px;
   overflow: hidden;
+  grid-template-rows: minmax(0, auto) minmax(0, auto);
 }
 
 .whiteboard-visual-top,
 .whiteboard-visual-bottom {
   min-width: 0;
+  min-height: 0;
+}
+
+.whiteboard-visual-top {
+  overflow: hidden;
+}
+
+.whiteboard-visual-bottom {
+  max-height: min(34vh, 260px);
+  overflow: auto;
 }
 
 .whiteboard-visual-svg {
   display: block;
   width: 100%;
-  min-height: 240px;
+  aspect-ratio: 620 / 300;
+  min-height: 0;
+  max-height: min(48vh, 420px);
+}
+
+.whiteboard-visual-svg text {
+  paint-order: stroke fill;
+  stroke: rgba(254, 254, 254, 0.84);
+  stroke-width: 4px;
+  stroke-linejoin: round;
 }
 
 .whiteboard-visual-copy {
@@ -4698,6 +4774,16 @@ pre {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+}
+
+@media (max-width: 900px) {
+  .whiteboard-visual-bottom {
+    grid-template-columns: 1fr;
+  }
+
+  .whiteboard-visual-actions {
+    justify-items: start;
+  }
 }
 
 @media (max-width: 1279px) {
@@ -4734,15 +4820,31 @@ pre {
 
   .whiteboard-visual-card {
     width: min(100%, 760px);
+    max-height: calc(100dvh - 28px);
   }
 
   .whiteboard-visual-top {
     padding: 16px 14px 0;
   }
 
+  .whiteboard-visual-svg {
+    max-height: 42vh;
+  }
+
   .whiteboard-visual-bottom {
     grid-template-columns: 1fr;
+    max-height: none;
     padding: 0 14px 16px;
+  }
+
+  .whiteboard-topic-row {
+    grid-template-columns: 10px 3.4ch minmax(0, 1fr) 20px;
+    min-height: 32px;
+  }
+
+  .whiteboard-topic-arrow {
+    width: 20px;
+    min-width: 20px;
   }
 
   .whiteboard-guide-footer-actions {

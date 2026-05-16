@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { Fragment, useState } from "react"
 import type { LoopSimulationData } from "@/types"
 import { T } from "@/lib/tokens"
 import { ExplanationPanel, SimulationCodePanel, SimulationControls, SimulationGrid, SimulationSection, SimulationShell, StateCard } from "@/components/ui/simulationShared"
@@ -49,7 +49,7 @@ export function LoopSimulation({ data }: LoopSimulationProps) {
       </SimulationGrid>
 
       <SimulationSection title={data.iterableLabel} tone="neutral">
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 2, flexWrap: "wrap", alignItems: "center" }}>
           {data.items.map((item, index) => {
             const isCurrent = step.pointer === index
             const isVisited = step.visitedIndices.includes(index)
@@ -64,27 +64,35 @@ export function LoopSimulation({ data }: LoopSimulationProps) {
                 ? `${T.green.accent}66`
                 : T.border
             const color = isCurrent ? T.teal.fg : isVisited ? T.green.fg : T.text2
+            const arrowColor = isCurrent ? T.teal.fg : isVisited ? T.green.fg : T.text3
 
             return (
-              <div key={index} style={{ minWidth: 62 }}>
-                <div style={{ fontSize: 10.5, color: T.text3, marginBottom: 5, textAlign: "center" }}>
-                  [{index}]
+              <Fragment key={index}>
+                {index > 0 && (
+                  <div style={{ color: arrowColor, fontSize: 16, alignSelf: "center", paddingBottom: 6, userSelect: "none" }}>
+                    →
+                  </div>
+                )}
+                <div style={{ minWidth: 62 }}>
+                  <div style={{ fontSize: 10.5, color: T.text3, marginBottom: 5, textAlign: "center" }}>
+                    [{index}]
+                  </div>
+                  <div style={{
+                    borderRadius: 10,
+                    border: `0.5px solid ${borderColor}`,
+                    background,
+                    color,
+                    padding: "10px 12px",
+                    textAlign: "center",
+                    fontFamily: "var(--font-mono)",
+                    fontSize: 13,
+                    fontWeight: 650,
+                    boxShadow: isCurrent ? `0 0 0 1px ${T.teal.accent}22 inset` : "none",
+                  }}>
+                    {String(item)}
+                  </div>
                 </div>
-                <div style={{
-                  borderRadius: 10,
-                  border: `0.5px solid ${borderColor}`,
-                  background,
-                  color,
-                  padding: "10px 12px",
-                  textAlign: "center",
-                  fontFamily: "var(--font-mono)",
-                  fontSize: 13,
-                  fontWeight: 650,
-                  boxShadow: isCurrent ? `0 0 0 1px ${T.teal.accent}22 inset` : "none",
-                }}>
-                  {String(item)}
-                </div>
-              </div>
+              </Fragment>
             )
           })}
         </div>

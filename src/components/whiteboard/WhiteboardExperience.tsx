@@ -91,7 +91,10 @@ export function WhiteboardExperience({
   const [mounted, setMounted] = useState(false)
   const [tocNote] = useState(() => pickTocNote())
 
-  useEffect(() => { setMounted(true) }, [])
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => setMounted(true), 0)
+    return () => window.clearTimeout(timeoutId)
+  }, [])
   const [openSectionIds, setOpenSectionIds] = useState<Set<string>>(() => new Set())
   const [loadedGuides, setLoadedGuides] = useState<LoadedGuideMap>({})
   const [guideLoadState, setGuideLoadState] = useState<GuideLoadState>({})
@@ -255,6 +258,18 @@ export function WhiteboardExperience({
     setVisualOpen(false)
     syncBrowserUrl(activeTopic.id, contentView, "push")
   }
+
+  const closeVisualRef = useRef(closeVisual)
+  closeVisualRef.current = closeVisual
+
+  useEffect(() => {
+    if (!visualOpen) return
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeVisualRef.current()
+    }
+    window.addEventListener("keydown", handler)
+    return () => window.removeEventListener("keydown", handler)
+  }, [visualOpen])
 
   const renderedGuide = useMemo(() => {
     const LoadedGuide = loadedGuides[activeTopic.id]
@@ -446,6 +461,7 @@ export function WhiteboardExperience({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
+              onClick={(e) => { if (e.target === e.currentTarget) closeVisualRef.current() }}
             >
               <motion.div
                 className="whiteboard-visual-card"
@@ -1163,5 +1179,4 @@ function Squiggle({ color, className }: { color: string; className?: string }) {
     </svg>
   )
 }
-
 
