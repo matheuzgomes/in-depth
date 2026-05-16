@@ -5,6 +5,7 @@ import type { CSSProperties, ReactNode } from "react"
 import { ChevronLeft, ChevronRight, Play, RotateCcw, SkipForward } from "lucide-react"
 import { T } from "@/lib/tokens"
 import { highlightLine } from "@/lib/highlight"
+import { RoughOverlay } from "@/components/ui/RoughOverlay"
 
 // ── Light theme simulation palette ─────────────────────────────────────
 export const C = {
@@ -31,72 +32,6 @@ export function darkAccent(fg: string): string {
     "#97c985": "#60a050",
   }
   return map[fg] ?? fg
-}
-
-// ── Roughjs hachure overlay ────────────────────────────────────────────
-
-function RoughOverlay({
-  stroke = "rgba(26, 26, 26, 0.25)",
-  fill = "rgba(26, 26, 26, 0.03)",
-}: {
-  stroke?: string
-  fill?: string
-}) {
-  const svgRef = useRef<SVGSVGElement>(null)
-
-  useLayoutEffect(() => {
-    const svg = svgRef.current
-    if (!svg) return
-    const parent = svg.parentElement
-    if (!parent) return
-
-    let cancelled = false
-
-    async function draw() {
-      const s = svgRef.current
-      if (!s) return
-      const p = s.parentElement
-      if (!p) return
-      const w = p.offsetWidth
-      const h = p.offsetHeight
-      if (w === 0 || h === 0) return
-
-      while (s.firstChild) s.removeChild(s.firstChild)
-      const rough = (await import("roughjs")).default
-      if (cancelled) return
-      const rc = rough.svg(s)
-      const node = rc.rectangle(0, 0, w, h, {
-        seed: 42,
-        stroke,
-        strokeWidth: 2.5,
-        fill,
-        fillStyle: "hachure",
-        roughness: 1.8,
-        bowing: 1.6,
-      })
-      if (node) s.appendChild(node)
-    }
-
-    void draw()
-
-    const ro = new ResizeObserver(() => { void draw() })
-    ro.observe(parent)
-
-    return () => {
-      cancelled = true
-      ro.disconnect()
-    }
-  }, [stroke, fill])
-
-  return (
-    <svg ref={svgRef}
-      style={{
-        position: "absolute", inset: 0,
-        width: "100%", height: "100%",
-        pointerEvents: "none", zIndex: 1,
-      }}
-    />
-  )
 }
 
 // ── Components ─────────────────────────────────────────────────────────
@@ -169,9 +104,9 @@ export function SimulationShell({
             background: `linear-gradient(180deg, ${C.card}, ${C.shell})`,
           }}>
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 14, fontWeight: 700, color: C.text1, fontFamily: "var(--font-board-display)" }}>{title}</div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: C.text1, fontFamily: "var(--font-board-display)" }}>{title}</div>
               {stepLabel ? (
-                <div style={{ fontSize: 11.5, color: C.text3, fontFamily: "var(--font-board-body)", marginTop: 4, lineHeight: 1.45 }}>{stepLabel}</div>
+                <div style={{ fontSize: 13, color: C.text3, fontFamily: "var(--font-board-body)", marginTop: 4, lineHeight: 1.45 }}>{stepLabel}</div>
               ) : null}
             </div>
           </div>
@@ -323,10 +258,10 @@ export function ExplanationPanel({
     }}>
       <RoughOverlay />
       <div style={{ position: "relative", zIndex: 2, padding: "13px 14px" }}>
-        <div style={{ fontSize: 12.5, color: C.text1, fontWeight: 650, fontFamily: "var(--font-board-display)", marginBottom: 5 }}>
+        <div style={{ fontSize: 14, color: C.text1, fontWeight: 650, fontFamily: "var(--font-board-display)", marginBottom: 5 }}>
           {title}
         </div>
-        <div style={{ fontSize: 12.5, color: C.text2, fontFamily: "var(--font-board-body)", lineHeight: 1.75 }}>
+        <div style={{ fontSize: 14, color: C.text2, fontFamily: "var(--font-board-body)", lineHeight: 1.75 }}>
           {explanation}
         </div>
         {footer}

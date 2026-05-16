@@ -11,9 +11,11 @@ import { Badge } from "@/components/ui/Badge"
 import { SLabel } from "@/components/ui/SLabel"
 import { Divider } from "@/components/ui/Divider"
 
-const BOOKMARKS_KEY = "python-in-depth:bookmarks"
-const LAST_READ_KEY = "python-in-depth:last-read"
-const BOOK_OPEN_KEY = "python-in-depth:book-opened"
+const BOOKMARKS_KEY = "teachboard:bookmarks"
+
+const LAST_READ_KEY = "teachboard:last-read"
+
+const BOOK_OPEN_KEY = "teachboard:book-opened"
 
 interface SerializableBadge {
   label: string

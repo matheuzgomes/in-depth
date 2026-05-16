@@ -20,7 +20,7 @@ import {
 } from "@/data/whiteboard"
 import { buildWhiteboardHref, normalizeTopicId, normalizeWhiteboardView, type WhiteboardView } from "@/lib/whiteboardRoute"
 
-const LAST_READ_KEY = "python-in-depth:last-read"
+const LAST_READ_KEY = "teachboard:last-read"
 const MOBILE_BREAKPOINT = 1024
 
 const MARKER_COLORS = {

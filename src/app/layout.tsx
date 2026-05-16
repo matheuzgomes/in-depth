@@ -40,8 +40,8 @@ const patrickHand = Patrick_Hand({
 
 export const metadata: Metadata = {
   title: {
-    template: "%s | Python in Depth",
-    default: "Python in Depth",
+    template: "%s | teachboard",
+    default: "teachboard",
   },
   description: "From foundation to production",
 }

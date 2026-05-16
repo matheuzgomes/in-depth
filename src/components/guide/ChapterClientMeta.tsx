@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react"
 import { Bookmark } from "lucide-react"
+const BOOKMARKS_KEY = "teachboard:bookmarks"
 
-const BOOKMARKS_KEY = "python-in-depth:bookmarks"
-const LAST_READ_KEY = "python-in-depth:last-read"
+const LAST_READ_KEY = "teachboard:last-read"
 
 export function ChapterClientMeta({ chapterId }: { chapterId: string }) {
   const [bookmarked, setBookmarked] = useState<boolean>(() => {

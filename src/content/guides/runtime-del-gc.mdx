@@ -48,7 +48,7 @@ On interpreters such as PyPy, object reclamation timing can differ materially be
 
 CPython uses two complementary memory management mechanisms, both implemented in `Objects/object.c` and `Modules/gcmodule.c`.
 
-**Reference counting.** Every PyObject in CPython starts with a `Py_REFCNT` field. `Py_INCREF()` increments it; `Py_DECREF()` decrements it and calls `_Py_Dealloc()` when it reaches zero. This is why `del x` on a local variable typically reclaims the object instantly: the `STORE_DELETE` opcode calls `Py_DECREF` right away. The reference count for a local variable lives in the function's fast-locals array; removing the binding decrements the count immediately.
+**Reference counting.** Every PyObject in CPython starts with a `Py_REFCNT` field. `Py_INCREF()` increments it; `Py_DECREF()` decrements it and calls `_Py_Dealloc()` when it reaches zero. This is why `del x` on a local variable typically reclaims the object instantly: the `DELETE_FAST` opcode removes the fast-local binding and decrements the reference count right away. The reference count for a local variable lives in the function's fast-locals array; removing the binding decrements the count immediately.
 
 **Cyclic garbage collector** (`Modules/gcmodule.c`, Python 3.12). The GC runs periodically to find and collect unreachable object cycles that reference counting alone cannot handle. It uses a generational approach with three generations:
 
@@ -60,7 +60,7 @@ The collection thresholds are tunable via `gc.get_threshold()` and default to `(
 
 The GC algorithm tracks container objects (those that can participate in cycles: dict, list, set, tuple, custom class instances, etc.). Non-container objects such as strings, integers, and small tuples are never tracked by the GC because they cannot own references to other objects that would form cycles.
 
-During collection, the GC performs a reference-count subtraction phase to identify truly unreachable objects in a cycle, then calls the finalizer (if any) and reclaims the memory. Objects with `__del__` methods complicate this process because Python cannot safely determine the order of finalizer calls in a cycle, which is why cyclic references involving `__del__` are moved to `gc.garbage` (Python 3.3 and earlier) or handled via the `weakref.finalize` mechanism.
+During collection, the GC performs a reference-count subtraction phase to identify truly unreachable objects in a cycle, then calls the finalizer (if any) and reclaims the memory. Objects with `__del__` methods still complicate cleanup because finalizers can observe partially torn-down object graphs, run at inconvenient times, or resurrect objects. Modern Python can collect many cycles with finalizers; `gc.garbage` is mostly for debug retention or extension types with legacy finalization hooks.
 
 <Callout type="info">
   Use <code>weakref.finalize</code> instead of <code>__del__</code> for cleanup callbacks. The <code>weakref.finalize</code> object is a first-class handle that can be queried with <code>.alive</code>, detached with <code>.detach()</code>, and does not resurrect the object or create the same cyclical headaches that raw <code>__del__</code> methods do. See the <a href="https://docs.python.org/3/library/weakref.html#weakref.finalize">weakref.finalize docs</a>.

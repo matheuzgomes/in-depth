@@ -27,7 +27,7 @@ print(double("ha"))  # 'haha'
 
 <SLabel>Mechanism and runtime behavior</SLabel>
 
-Function annotations are stored on `__annotations__`. Class annotations are visible to tools and to libraries such as `dataclasses`, but Python itself does not automatically validate them.
+Function annotations are exposed through `__annotations__`. Class annotations are visible to tools and to libraries such as `dataclasses`, but Python itself does not automatically validate them. In Python 3.14+, annotations are evaluated lazily; use `typing.get_type_hints()` when runtime code needs resolved annotation values.
 
 ```python
 # [CURRENT - 3.10-3.14] Works on Python 3.x

@@ -4,9 +4,9 @@ import { ArrowLeft, ArrowRight, Bookmark, ExternalLink } from "lucide-react"
 import Link from "next/link"
 import { useEffect, useMemo, useState } from "react"
 import type { TopicCardData } from "@/types"
+const BOOKMARKS_KEY = "teachboard:bookmarks"
 
-const BOOKMARKS_KEY = "python-in-depth:bookmarks"
-const LAST_READ_KEY = "python-in-depth:last-read"
+const LAST_READ_KEY = "teachboard:last-read"
 
 type SerializableGuideCard = Pick<TopicCardData, "id" | "title" | "desc" | "color" | "badges" | "cats" | "kw">
 
