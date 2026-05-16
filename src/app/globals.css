@@ -1421,7 +1421,7 @@ pre {
 }
 
 .book-article strong {
-  color: var(--text1) !important;
+  color: #7c3aed !important;
 }
 
 .book-article table {
@@ -4168,12 +4168,12 @@ pre {
 }
 
 .whiteboard-guide-article strong {
-  color: #0f172a;
+  color: #7c3aed;
   font-weight: 700;
 }
 
 .whiteboard-guide-article em {
-  color: #334155;
+  color: var(--teal-fg);
 }
 
 .whiteboard-guide-article blockquote {
@@ -4476,7 +4476,7 @@ pre {
 }
 
 .whiteboard-note-paragraph strong {
-  color: #102a63;
+  color: #7c3aed;
 }
 
 .whiteboard-note-paragraph--empty {
