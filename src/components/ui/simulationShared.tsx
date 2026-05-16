@@ -1,9 +1,105 @@
 "use client"
 
+import { useLayoutEffect, useRef } from "react"
 import type { CSSProperties, ReactNode } from "react"
 import { ChevronLeft, ChevronRight, Play, RotateCcw, SkipForward } from "lucide-react"
 import { T } from "@/lib/tokens"
 import { highlightLine } from "@/lib/highlight"
+
+// ── Light theme simulation palette ─────────────────────────────────────
+export const C = {
+  shell: "#ede8de",
+  card: "#faf6f0",
+  code: "#f5f2ec",
+  border: "rgba(26, 26, 26, 0.12)",
+  borderHi: "rgba(26, 26, 26, 0.2)",
+  text1: "#172033",
+  text2: "#4a4860",
+  text3: "#7c7a8a",
+  teal: "#2d7d63",
+  amber: "#a87330",
+  blue: "#5a7fbf",
+}
+
+export function darkAccent(fg: string): string {
+  const map: Record<string, string> = {
+    "#a89cf5": "#7a6fd4",
+    "#5ec9a1": C.teal,
+    "#f0b060": C.amber,
+    "#9fb8ff": C.blue,
+    "#d7a38a": "#b07858",
+    "#97c985": "#60a050",
+  }
+  return map[fg] ?? fg
+}
+
+// ── Roughjs hachure overlay ────────────────────────────────────────────
+
+function RoughOverlay({
+  stroke = "rgba(26, 26, 26, 0.25)",
+  fill = "rgba(26, 26, 26, 0.03)",
+}: {
+  stroke?: string
+  fill?: string
+}) {
+  const svgRef = useRef<SVGSVGElement>(null)
+
+  useLayoutEffect(() => {
+    const svg = svgRef.current
+    if (!svg) return
+    const parent = svg.parentElement
+    if (!parent) return
+
+    let cancelled = false
+
+    async function draw() {
+      const s = svgRef.current
+      if (!s) return
+      const p = s.parentElement
+      if (!p) return
+      const w = p.offsetWidth
+      const h = p.offsetHeight
+      if (w === 0 || h === 0) return
+
+      while (s.firstChild) s.removeChild(s.firstChild)
+      const rough = (await import("roughjs")).default
+      if (cancelled) return
+      const rc = rough.svg(s)
+      const node = rc.rectangle(0, 0, w, h, {
+        seed: 42,
+        stroke,
+        strokeWidth: 2.5,
+        fill,
+        fillStyle: "hachure",
+        roughness: 1.8,
+        bowing: 1.6,
+      })
+      if (node) s.appendChild(node)
+    }
+
+    void draw()
+
+    const ro = new ResizeObserver(() => { void draw() })
+    ro.observe(parent)
+
+    return () => {
+      cancelled = true
+      ro.disconnect()
+    }
+  }, [stroke, fill])
+
+  return (
+    <svg ref={svgRef}
+      style={{
+        position: "absolute", inset: 0,
+        width: "100%", height: "100%",
+        pointerEvents: "none", zIndex: 1,
+      }}
+    />
+  )
+}
+
+// ── Components ─────────────────────────────────────────────────────────
 
 export function SimulationShell({
   open,
@@ -26,17 +122,17 @@ export function SimulationShell({
     <div style={{
       margin: "18px 0 22px",
       borderRadius: 24,
-      border: `1px solid ${T.borderHi}`,
-      background: `linear-gradient(180deg, ${T.articleAlt}, ${T.article})`,
-      boxShadow: `0 20px 48px rgba(2, 6, 16, 0.28), inset 0 1px 0 rgba(255,255,255,0.03)`,
+      border: `1px solid ${C.borderHi}`,
+      background: C.shell,
+      boxShadow: `0 4px 16px rgba(0, 0, 0, 0.06)`,
       overflow: "hidden",
     }}>
       {!open ? (
         <div style={{ padding: "18px 20px" }}>
-          <div style={{ fontSize: 15, fontWeight: 700, color: T.text1, marginBottom: 8 }}>
+          <div style={{ fontSize: 15, fontWeight: 700, color: C.text1, fontFamily: "var(--font-board-display)", marginBottom: 8 }}>
             {title}
           </div>
-          <p style={{ margin: 0, fontSize: 13, lineHeight: 1.75, color: T.text2, maxWidth: 58 * 8 }}>
+          <p style={{ margin: 0, fontSize: 13, lineHeight: 1.75, color: C.text2, fontFamily: "var(--font-board-body)", maxWidth: 58 * 8 }}>
             {summary}
           </p>
           <button
@@ -48,11 +144,12 @@ export function SimulationShell({
               gap: 8,
               borderRadius: 999,
               border: `1px solid ${T.teal.accent}66`,
-              background: `linear-gradient(180deg, ${T.teal.bg}, ${T.bg2})`,
-              color: T.teal.fg,
+              background: `linear-gradient(180deg, ${T.teal.bg}, ${C.shell})`,
+              color: C.teal,
               padding: "10px 14px",
               fontSize: 12.5,
               fontWeight: 650,
+              fontFamily: "var(--font-board-body)",
               cursor: "pointer",
             }}
           >
@@ -68,13 +165,13 @@ export function SimulationShell({
             justifyContent: "space-between",
             gap: 12,
             padding: "14px 18px",
-            borderBottom: `1px solid ${T.border}`,
-              background: `linear-gradient(180deg, ${T.bg2}, ${T.articleAlt})`,
+            borderBottom: `1px solid ${C.border}`,
+            background: `linear-gradient(180deg, ${C.card}, ${C.shell})`,
           }}>
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 14, fontWeight: 700, color: T.text1 }}>{title}</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: C.text1, fontFamily: "var(--font-board-display)" }}>{title}</div>
               {stepLabel ? (
-                <div style={{ fontSize: 11.5, color: T.text3, marginTop: 4, lineHeight: 1.45 }}>{stepLabel}</div>
+                <div style={{ fontSize: 11.5, color: C.text3, fontFamily: "var(--font-board-body)", marginTop: 4, lineHeight: 1.45 }}>{stepLabel}</div>
               ) : null}
             </div>
           </div>
@@ -133,39 +230,39 @@ export function SimulationCodePanel({
 
   return (
     <div style={{
+      position: "relative",
+      overflow: "hidden",
       borderRadius: 16,
-      border: `1px solid ${T.border}`,
-      background: `linear-gradient(180deg, ${T.code}, ${T.bg0})`,
-      padding: "14px 16px",
-      fontFamily: "var(--font-mono)",
-      fontSize: 12.5,
-      lineHeight: 1.75,
-      overflowX: "auto",
+      border: `1px solid ${C.border}`,
+      background: C.code,
     }}>
-      {codeLines.map((line, index) => {
-        const lineNumber = index + 1
-        const active = activeLine === lineNumber
+      <RoughOverlay stroke="rgba(26, 26, 26, 0.2)" fill="rgba(26, 26, 26, 0.02)" />
+      <div style={{ position: "relative", zIndex: 2, padding: "14px 16px", fontFamily: "var(--font-mono)", fontSize: 12.5, lineHeight: 1.75, overflowX: "auto" }}>
+        {codeLines.map((line, index) => {
+          const lineNumber = index + 1
+          const active = activeLine === lineNumber
 
-        return (
-          <div
-            key={lineNumber}
-            style={{
-              display: "grid",
-              gridTemplateColumns: "30px minmax(0, 1fr)",
-              gap: 10,
-              alignItems: "start",
-              padding: "2px 6px",
-              margin: "1px 0",
-              borderRadius: 8,
-              background: active ? "rgba(94, 201, 161, 0.14)" : "transparent",
-              border: active ? `1px solid ${T.teal.accent}55` : "1px solid transparent",
-            }}
-          >
-            <span style={{ color: active ? T.teal.fg : T.text3, userSelect: "none" }}>{lineNumber}</span>
-            <code style={{ display: "block", whiteSpace: "pre" }}>{highlightLine(line)}</code>
-          </div>
-        )
-      })}
+          return (
+            <div
+              key={lineNumber}
+              style={{
+                display: "grid",
+                gridTemplateColumns: "30px minmax(0, 1fr)",
+                gap: 10,
+                alignItems: "start",
+                padding: "2px 6px",
+                margin: "1px 0",
+                borderRadius: 8,
+                background: active ? "rgba(94, 201, 161, 0.14)" : "transparent",
+                border: active ? `1px solid ${T.teal.accent}55` : "1px solid transparent",
+              }}
+            >
+              <span style={{ color: active ? C.teal : C.text3, userSelect: "none" }}>{lineNumber}</span>
+              <code style={{ display: "block", whiteSpace: "pre", color: C.text1 }}>{highlightLine(line)}</code>
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }
@@ -183,18 +280,23 @@ export function StateCard({
 }) {
   return (
     <div style={{
+      position: "relative",
+      overflow: "hidden",
       borderRadius: 16,
       border: `1px solid ${color.accent}44`,
-      background: `linear-gradient(180deg, ${color.bg}, rgba(255,255,255,0.02))`,
+      background: C.card,
       padding: "12px 13px",
       minHeight,
       minWidth: 0,
     }}>
-      <div style={{ fontSize: 10.5, letterSpacing: "0.08em", textTransform: "uppercase", color: color.fg, marginBottom: 8, fontWeight: 800 }}>
-        {label}
-      </div>
-      <div style={{ fontSize: 13.5, color: T.text1, lineHeight: 1.55, fontFamily: "var(--font-mono)", whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
-        {value}
+      <RoughOverlay />
+      <div style={{ position: "relative", zIndex: 2 }}>
+        <div style={{ fontSize: 10.5, letterSpacing: "0.08em", textTransform: "uppercase", color: darkAccent(color.fg), marginBottom: 8, fontWeight: 800, fontFamily: "var(--font-board-display)" }}>
+          {label}
+        </div>
+        <div style={{ fontSize: 13.5, color: C.text1, lineHeight: 1.55, fontFamily: "var(--font-mono)", whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
+          {value}
+        </div>
       </div>
     </div>
   )
@@ -213,18 +315,22 @@ export function ExplanationPanel({
 }) {
   return (
     <div style={{
+      position: "relative",
+      overflow: "hidden",
       borderRadius: 16,
-      border: `1px solid ${T.border}`,
-      background: done ? "rgba(106, 171, 238, 0.12)" : `linear-gradient(180deg, ${T.bg2}, ${T.articleAlt})`,
-      padding: "13px 14px",
+      border: `1px solid ${C.border}`,
+      background: done ? "rgba(106, 171, 238, 0.12)" : C.card,
     }}>
-      <div style={{ fontSize: 12.5, color: T.text1, fontWeight: 650, marginBottom: 5 }}>
-        {title}
+      <RoughOverlay />
+      <div style={{ position: "relative", zIndex: 2, padding: "13px 14px" }}>
+        <div style={{ fontSize: 12.5, color: C.text1, fontWeight: 650, fontFamily: "var(--font-board-display)", marginBottom: 5 }}>
+          {title}
+        </div>
+        <div style={{ fontSize: 12.5, color: C.text2, fontFamily: "var(--font-board-body)", lineHeight: 1.75 }}>
+          {explanation}
+        </div>
+        {footer}
       </div>
-      <div style={{ fontSize: 12.5, color: T.text2, lineHeight: 1.75 }}>
-        {explanation}
-      </div>
-      {footer}
     </div>
   )
 }
@@ -257,15 +363,17 @@ export function SimulationSection({
   tone?: "neutral" | "teal" | "amber" | "blue"
 }) {
   const toneMap = {
-    neutral: { bg: T.bg2, border: T.border, title: T.text1 },
-    teal: { bg: "rgba(94, 201, 161, 0.08)", border: `${T.teal.accent}33`, title: T.teal.fg },
-    amber: { bg: "rgba(240, 176, 96, 0.08)", border: `${T.amber.accent}33`, title: T.amber.fg },
-    blue: { bg: "rgba(132, 160, 220, 0.08)", border: `${T.blue.accent}33`, title: T.blue.fg },
+    neutral: { bg: C.card, border: C.border, title: C.text1 },
+    teal: { bg: "rgba(94, 201, 161, 0.10)", border: `${T.teal.accent}33`, title: C.teal },
+    amber: { bg: "rgba(240, 176, 96, 0.10)", border: `${T.amber.accent}33`, title: C.amber },
+    blue: { bg: "rgba(132, 160, 220, 0.10)", border: `${T.blue.accent}33`, title: C.blue },
   } as const
   const current = toneMap[tone]
 
   return (
     <section style={{
+      position: "relative",
+      overflow: "hidden",
       borderRadius: 16,
       border: `1px solid ${current.border}`,
       background: current.bg,
@@ -274,10 +382,13 @@ export function SimulationSection({
       gap: 12,
       minWidth: 0,
     }}>
-      <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: current.title }}>
-        {title}
+      <RoughOverlay />
+      <div style={{ position: "relative", zIndex: 2 }}>
+        <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", fontFamily: "var(--font-board-display)", color: current.title }}>
+          {title}
+        </div>
+        {children}
       </div>
-      {children}
     </section>
   )
 }
@@ -302,12 +413,13 @@ export function SimulationPillButton({
       onClick={onClick}
       style={{
         borderRadius: 999,
-        border: `1px solid ${selected ? `${color.accent}77` : T.border}`,
-        background: selected ? color.bg : T.bg2,
-        color: selected ? color.fg : T.text2,
+        border: `1px solid ${selected ? `${color.accent}77` : C.border}`,
+        background: selected ? color.bg : C.card,
+        color: selected ? darkAccent(color.fg) : C.text2,
         padding: "7px 11px",
         fontSize: 11.5,
         fontWeight: 650,
+        fontFamily: "var(--font-board-body)",
         cursor: "pointer",
       }}
     >
@@ -333,14 +445,63 @@ export function SimulationSelectableCard({
   color?: { bg: string; fg: string; accent: string }
   eyebrow?: ReactNode
 }) {
+  const svgRef = useRef<SVGSVGElement>(null)
+  const btnRef = useRef<HTMLButtonElement>(null)
+
+  useLayoutEffect(() => {
+    const btn = btnRef.current
+    const svg = svgRef.current
+    if (!btn || !svg) return
+
+    let cancelled = false
+
+    async function draw() {
+      const s = svgRef.current
+      if (!s) return
+      const b = btnRef.current
+      if (!b) return
+      const w = b.offsetWidth
+      const h = b.offsetHeight
+      if (w === 0 || h === 0) return
+
+      while (s.firstChild) s.removeChild(s.firstChild)
+      const rough = (await import("roughjs")).default
+      if (cancelled) return
+      const rc = rough.svg(s)
+      const node = rc.rectangle(0, 0, w, h, {
+        seed: 42,
+        stroke: "rgba(26, 26, 26, 0.25)",
+        strokeWidth: 2.5,
+        fill: "rgba(26, 26, 26, 0.03)",
+        fillStyle: "hachure",
+        roughness: 1.8,
+        bowing: 1.6,
+      })
+      if (node) s.appendChild(node)
+    }
+
+    void draw()
+
+    const ro = new ResizeObserver(() => { void draw() })
+    ro.observe(btn)
+
+    return () => {
+      cancelled = true
+      ro.disconnect()
+    }
+  }, [])
+
   return (
     <button
+      ref={btnRef}
       onClick={onClick}
       style={{
+        position: "relative",
+        overflow: "hidden",
         textAlign: "left",
         borderRadius: 16,
-        border: `1px solid ${selected ? `${color.accent}88` : T.border}`,
-        background: selected ? color.bg : T.bg2,
+        border: `1px solid ${selected ? `${color.accent}88` : C.border}`,
+        background: selected ? color.bg : C.card,
         padding: "14px",
         cursor: "pointer",
         display: "grid",
@@ -348,27 +509,38 @@ export function SimulationSelectableCard({
         minWidth: 0,
       }}
     >
-      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8 }}>
-        <div style={{ fontSize: 14, fontWeight: 700, color: selected ? color.fg : T.text1 }}>
-          {title}
+      <svg ref={svgRef}
+        style={{
+          position: "absolute", inset: 0,
+          width: "100%", height: "100%",
+          pointerEvents: "none", zIndex: 1,
+        }}
+      />
+      <div style={{ position: "relative", zIndex: 2 }}>
+        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8 }}>
+          <div style={{ fontSize: 14, fontWeight: 700, fontFamily: "var(--font-board-display)", color: selected ? darkAccent(color.fg) : C.text1 }}>
+            {title}
+          </div>
+          {eyebrow ? (
+            <div style={{ fontSize: 10.5, color: C.text3, fontFamily: "var(--font-board-body)", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+              {eyebrow}
+            </div>
+          ) : null}
         </div>
-        {eyebrow ? (
-          <div style={{ fontSize: 10.5, color: T.text3, letterSpacing: "0.08em", textTransform: "uppercase" }}>
-            {eyebrow}
+        <div style={{ fontSize: 12.5, color: C.text2, fontFamily: "var(--font-board-body)", lineHeight: 1.65, overflowWrap: "anywhere" }}>
+          {body}
+        </div>
+        {footer ? (
+          <div style={{ fontSize: 11.5, color: selected ? darkAccent(color.fg) : C.text3, fontFamily: "var(--font-board-body)", lineHeight: 1.65, overflowWrap: "anywhere" }}>
+            {footer}
           </div>
         ) : null}
       </div>
-      <div style={{ fontSize: 12.5, color: T.text2, lineHeight: 1.65, overflowWrap: "anywhere" }}>
-        {body}
-      </div>
-      {footer ? (
-        <div style={{ fontSize: 11.5, color: selected ? color.fg : T.text3, lineHeight: 1.65, overflowWrap: "anywhere" }}>
-          {footer}
-        </div>
-      ) : null}
     </button>
   )
 }
+
+// ── Shared styles ──────────────────────────────────────────────────────
 
 function controlButtonStyle(disabled: boolean): CSSProperties {
   return {
@@ -376,12 +548,13 @@ function controlButtonStyle(disabled: boolean): CSSProperties {
     alignItems: "center",
     gap: 6,
     borderRadius: 999,
-    border: `1px solid ${disabled ? T.border : T.borderHi}`,
-    background: disabled ? T.bg1 : `linear-gradient(180deg, ${T.bg3}, ${T.bg2})`,
-    color: disabled ? T.text3 : T.text2,
+    border: `1px solid ${disabled ? C.border : C.borderHi}`,
+    background: disabled ? C.code : `linear-gradient(180deg, ${C.card}, ${C.shell})`,
+    color: disabled ? C.text3 : C.text2,
     padding: "8px 12px",
     fontSize: 11.5,
     fontWeight: 650,
+    fontFamily: "var(--font-board-body)",
     cursor: disabled ? "not-allowed" : "pointer",
     opacity: disabled ? 0.7 : 1,
   }

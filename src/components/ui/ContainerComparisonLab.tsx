@@ -4,6 +4,7 @@ import { useMemo, useState } from "react"
 import type { ContainerComparisonContainer, ContainerComparisonId, ContainerComparisonLabData, ContainerWorkloadId } from "@/types"
 import { T } from "@/lib/tokens"
 import {
+  C,
   ExplanationPanel,
   SimulationCodePanel,
   SimulationGrid,
@@ -108,13 +109,13 @@ export function ContainerComparisonLab({ data }: ContainerComparisonLabProps) {
         footer={
           <div style={{ marginTop: 10, display: "grid", gap: 8 }}>
             <div style={{ fontSize: 12, color: T.text3, lineHeight: 1.65 }}>
-              <strong style={{ color: T.text2, fontWeight: 650 }}>Language guarantee:</strong> {container.languageGuarantee}
+              <strong style={{ color: C.text2, fontWeight: 650 }}>Language guarantee:</strong> {container.languageGuarantee}
             </div>
             <div style={{ fontSize: 12, color: T.text3, lineHeight: 1.65 }}>
-              <strong style={{ color: T.text2, fontWeight: 650 }}>CPython note:</strong> {container.cpythonNote}
+              <strong style={{ color: C.text2, fontWeight: 650 }}>CPython note:</strong> {container.cpythonNote}
             </div>
             <div style={{ fontSize: 12, color: T.text3, lineHeight: 1.65 }}>
-              <strong style={{ color: T.text2, fontWeight: 650 }}>Order / uniqueness:</strong> {container.orderContract} {container.uniquenessContract}
+              <strong style={{ color: C.text2, fontWeight: 650 }}>Order / uniqueness:</strong> {container.orderContract} {container.uniquenessContract}
             </div>
             {data.note ? (
               <div style={{ fontSize: 11.5, color: T.text3, lineHeight: 1.65 }}>
@@ -154,7 +155,7 @@ function DetailPanel({
 }) {
   return (
     <SimulationSection title={label} tone="neutral">
-      <div style={{ fontSize: 12.5, color: T.text1, lineHeight: 1.75 }}>
+      <div style={{ fontSize: 12.5, color: C.text1, lineHeight: 1.75 }}>
         {body}
       </div>
     </SimulationSection>

@@ -4,6 +4,7 @@ import { useMemo, useState } from "react"
 import type { AsyncTimelineLabData, AsyncTimelineStatus } from "@/types"
 import { T } from "@/lib/tokens"
 import {
+  C,
   ExplanationPanel,
   SimulationCodePanel,
   SimulationControls,
@@ -13,6 +14,7 @@ import {
   SimulationSection,
   SimulationShell,
   StateCard,
+  darkAccent,
 } from "@/components/ui/simulationShared"
 
 interface AsyncTimelineLabProps {
@@ -20,12 +22,12 @@ interface AsyncTimelineLabProps {
 }
 
 const STATUS_STYLE: Record<AsyncTimelineStatus, { bg: string; fg: string; border: string }> = {
-  running: { bg: T.teal.bg, fg: T.teal.fg, border: `${T.teal.accent}88` },
-  ready: { bg: T.blue.bg, fg: T.blue.fg, border: `${T.blue.accent}88` },
-  awaiting: { bg: T.amber.bg, fg: T.amber.fg, border: `${T.amber.accent}88` },
-  blocked: { bg: T.coral.bg, fg: T.coral.fg, border: `${T.coral.accent}88` },
-  done: { bg: "rgba(136, 196, 90, 0.12)", fg: T.green.fg, border: `${T.green.accent}88` },
-  cancelled: { bg: "rgba(255, 132, 132, 0.12)", fg: T.coral.fg, border: `${T.coral.accent}88` },
+  running: { bg: T.teal.bg, fg: darkAccent(T.teal.fg), border: `${T.teal.accent}88` },
+  ready: { bg: T.blue.bg, fg: darkAccent(T.blue.fg), border: `${T.blue.accent}88` },
+  awaiting: { bg: T.amber.bg, fg: darkAccent(T.amber.fg), border: `${T.amber.accent}88` },
+  blocked: { bg: T.coral.bg, fg: darkAccent(T.coral.fg), border: `${T.coral.accent}88` },
+  done: { bg: "rgba(136, 196, 90, 0.12)", fg: darkAccent(T.green.fg), border: `${T.green.accent}88` },
+  cancelled: { bg: "rgba(255, 132, 132, 0.12)", fg: darkAccent(T.coral.fg), border: `${T.coral.accent}88` },
 }
 
 export function AsyncTimelineLab({ data }: AsyncTimelineLabProps) {
@@ -104,7 +106,7 @@ export function AsyncTimelineLab({ data }: AsyncTimelineLabProps) {
                     {task.status}
                   </div>
                 </div>
-                <div style={{ fontSize: 11.5, color: T.text2, lineHeight: 1.65 }}>
+                <div style={{ fontSize: 11.5, color: C.text2, lineHeight: 1.65 }}>
                   {task.detail}
                 </div>
               </div>
@@ -120,10 +122,10 @@ export function AsyncTimelineLab({ data }: AsyncTimelineLabProps) {
         footer={
           <div style={{ marginTop: 10, display: "grid", gap: 8 }}>
             <div style={{ fontSize: 12, color: T.text3, lineHeight: 1.65 }}>
-              <strong style={{ color: T.text2, fontWeight: 650 }}>Scenario summary:</strong> {scenario.summary}
+              <strong style={{ color: C.text2, fontWeight: 650 }}>Scenario summary:</strong> {scenario.summary}
             </div>
             <div style={{ fontSize: 12, color: T.text3, lineHeight: 1.65 }}>
-              <strong style={{ color: T.text2, fontWeight: 650 }}>Key takeaway:</strong> {scenario.takeaway}
+              <strong style={{ color: C.text2, fontWeight: 650 }}>Key takeaway:</strong> {scenario.takeaway}
             </div>
             {data.note ? (
               <div style={{ fontSize: 11.5, color: T.text3, lineHeight: 1.65 }}>

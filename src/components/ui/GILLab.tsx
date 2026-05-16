@@ -4,6 +4,7 @@ import { useMemo, useState } from "react"
 import type { GILLabData, GILScenario, GILScenarioId } from "@/types"
 import { T } from "@/lib/tokens"
 import {
+  C,
   ExplanationPanel,
   SimulationCodePanel,
   SimulationGrid,
@@ -12,6 +13,7 @@ import {
   SimulationSelectableCard,
   SimulationShell,
   StateCard,
+  darkAccent,
 } from "@/components/ui/simulationShared"
 
 interface GILLabProps {
@@ -109,10 +111,10 @@ function DetailPanel({
       background: color.bg,
       padding: "13px 14px",
     }}>
-      <div style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: color.fg, marginBottom: 8 }}>
+      <div style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: darkAccent(color.fg), marginBottom: 8 }}>
         {label}
       </div>
-      <div style={{ fontSize: 12.5, color: T.text1, lineHeight: 1.75 }}>
+      <div style={{ fontSize: 12.5, color: C.text1, lineHeight: 1.75 }}>
         {body}
       </div>
     </div>
