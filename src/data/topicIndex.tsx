@@ -64,7 +64,7 @@ export const TOPIC_SECTIONS: TopicSection[] = [
     id: "classes",
     label: "Data classes & types",
     cards: [
-      { id: "classes-data-builders", color: "blue", Icon: Braces, title: "namedtuple, NamedTuple, or dataclass?", desc: "Pick the right data class builder for records, typed tuples, and mutable objects", badges: [{ label: "Classes", color: "blue" }], cats: ["classes", "language"], kw: "namedtuple NamedTuple dataclass record immutable mutable fields annotations" },
+      { id: "classes-data-builders", color: "blue", Icon: Braces, title: "namedtuple, NamedTuple or dataclass?", desc: "Pick the right data class builder for records, typed tuples, and mutable objects", badges: [{ label: "Classes", color: "blue" }], cats: ["classes", "language"], kw: "namedtuple NamedTuple dataclass record immutable mutable fields annotations" },
       { id: "classes-dataclass-fields", color: "amber", Icon: Layers, title: "Dataclass fields and generated behavior", desc: "default_factory, frozen, order, ClassVar, InitVar, and __post_init__", badges: [{ label: "dataclass", color: "amber" }], cats: ["classes", "patterns"], kw: "dataclass field default_factory frozen order ClassVar InitVar post_init slots" },
     ],
   },
