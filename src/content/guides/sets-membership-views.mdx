@@ -1,6 +1,8 @@
 import { setMembershipSimulation } from "@/data/simulations"
 
-Sets are hash tables specialized for uniqueness, membership, and algebra. Dictionary views let you perform similar set-style reasoning over keys and items without materializing a separate set first.
+You check whether a username is in a blocked list with `username in blocked_list`. That works — but if `blocked_list` is a `list`, Python scans every element one by one. If it is a `set`, Python computes the hash and checks in one step. The difference between linear scan and hash lookup grows with every element.
+
+Think of a set like a club bouncer with a perfect memory. You say a name, and the bouncer instantly knows whether it is on the list. A list is like the same bouncer reading every name on a clipboard one by one. Dictionary views extend the same hash-powered lookup to the keys and items of a dict — no need to build a separate set first.
 
 <SLabel>Core answer</SLabel>
 
@@ -55,7 +57,7 @@ for n in (0, 1, 4, 5, 16, 32):
 
 That overhead is the price of near-constant-time membership.
 
-The set base object (`216` bytes for an empty set on CPython 3.12) is much larger than a dict (`64` bytes) because the set object includes inline hash table arrays even at minimum size. Fluent Python (Ramalho, 2022, Ch. 3) notes that sets make this tradeoff deliberately: they optimize for the membership workload, not for compact empty-state storage.
+The set base object (`216` bytes for an empty set on CPython 3.12) is much larger than a dict (`64` bytes) because the set object includes inline hash table arrays even at minimum size. Sets make this tradeoff deliberately: they optimize for the membership workload over compact empty-state storage.
 
 <SLabel>CPython internals</SLabel>
 
@@ -81,7 +83,7 @@ A key difference from dict: sets track a separate `hash` array in addition to th
 When you call `set()` on an iterable, CPython calls `set_update_iterable` in `Objects/setobject.c` (Python 3.12), which iterates the source and inserts each element one at a time. The `frozenset` constructor does the same but returns an immutable wrapper around the same hash table, with no add/discard methods.
 
 <Callout type="info">
-  Ramalho (Fluent Python, 2nd ed., Ch. 3) emphasizes that <code>frozenset</code> is not just an immutable set — it is hashable, which means it can be used as a dict key or set element. This is its primary practical advantage over mutable <code>set</code>, not just the immutability.
+  <code>frozenset</code> is hashable, which means it can be used as a dict key or set element. This is its primary practical advantage over mutable <code>set</code> — without hashability, you could not nest sets inside sets or use them as mapping keys.
 </Callout>
 
 <SLabel>Set algebra and API edges</SLabel>
@@ -187,4 +189,4 @@ When each key needs associated data, move back to dictionaries; see <CardRef id=
 - [CPython source: Objects/setobject.c](https://github.com/python/cpython/blob/main/Objects/setobject.c)
 - [PEP 412: Key-Sharing Dictionary](https://peps.python.org/pep-0412/)
 - [sys.getsizeof](https://docs.python.org/3/library/sys.html#sys.getsizeof)
-- Fluent Python, 2nd ed., Ch. 3: Dictionaries and Sets — covers the set hash table, frozenset hashability, and set algebra patterns
+- [set and frozenset documentation](https://docs.python.org/3/library/stdtypes.html#set-types-set-frozenset)

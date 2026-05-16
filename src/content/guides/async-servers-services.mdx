@@ -1,6 +1,8 @@
 import { asyncServersTimelineData } from "@/data/simulations"
 
-This guide covers the server-side chapter-21 subjects: writing asyncio servers, understanding the lifecycle of a TCP handler, and relating those mechanics to higher-level async web-service frameworks.
+An async server accepts connections, starts handler coroutines, and awaits network readiness without blocking the entire process. The value is not just "many clients at once" — it is that one slow client does not freeze service for everyone else.
+
+Think of an async server like a restaurant with multiple waiters. One table that takes forever to order does not stop the other tables from being served. Each waiter (handler coroutine) handles their own table and yields when they are waiting — for the kitchen, for the credit card machine, for the customer to decide.
 
 <SLabel>Core answer</SLabel>
 
@@ -11,7 +13,7 @@ An async server is fundamentally an event loop that:
 - awaits readable / writable network readiness
 - returns control quickly so other clients can progress
 
-The value is not just "many clients at once." The value is "many clients without one blocked client freezing the whole process."
+The value is many clients without one blocked client freezing the whole process.
 
 ```python
 # [OLDER / 3.7-3.8, CURRENT - 3.10-3.14] Works on Python 3.7+
@@ -54,7 +56,7 @@ The real design win is that `reader.readline()` and `writer.drain()` are suspens
 
 <SLabel>FastAPI and higher-level services</SLabel>
 
-Fluent Python uses both a higher-level web-service example and a raw TCP server to show that the same async principles recur at different abstraction levels.
+The same async principles recur at different abstraction levels — whether you are writing a raw TCP handler or using a web framework.
 
 This project stays standard-library-first, so the guide focuses on Python and event-loop mechanics rather than framework-specific APIs. The durable lesson is:
 

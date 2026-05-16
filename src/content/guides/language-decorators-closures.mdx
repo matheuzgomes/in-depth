@@ -1,4 +1,6 @@
-Decorators and closures are not separate magic features. They are consequences of Python functions being first-class objects with lexical scoping and function objects that can capture state.
+Python lets you pass a function to another function, wrap it, and return a replacement. That is all a decorator is. And a function defined inside another function can keep using the outer function's variables after the outer function finishes — that is all a closure is. Neither is magic; both follow from functions being first-class objects with lexical scoping.
+
+Think of a decorator like a mailing service. You hand over your envelope, the service adds a stamp and forwarding address, and hands back the same envelope with extra capability. The original letter is still inside. A closure is like a post office box: even after you walk away from the counter, the box still holds mail for you. The inner function retains access to variables from the enclosing scope, even after the outer function has returned.
 
 <SLabel>Core answer</SLabel>
 
@@ -53,7 +55,7 @@ print(fn.__closure__[0].cell_contents)
 dis.dis(fn)
 ```
 
-On CPython, the bytecode for the inner function uses `LOAD_DEREF` to read from the closure cell. That detail is implementation-specific, but it makes the mechanism concrete: the value is not copied into the function body; it is referenced through stored closure state.
+On CPython, the bytecode for the inner function uses `LOAD_DEREF` to read from the closure cell. That detail is implementation-specific, but it makes the mechanism concrete: the value stays in the closure cell and is read through `LOAD_DEREF` — never copied into the inner function body.
 
 `nonlocal` is required only when rebinding the outer name, not when mutating an object referenced by that name.
 

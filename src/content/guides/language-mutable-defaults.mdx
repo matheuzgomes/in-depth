@@ -1,4 +1,6 @@
-Mutable default arguments are shared state stored on the function object. The bug is not "Python forgot to reset the list." The list was never meant to reset because the default expression runs once, at function definition time.
+You defined a function with `bucket=[]` as a default, called it twice, and watched accumulated values spill across calls. It looked like Python betrayed you. But the list was never meant to reset — it was created once when Python defined the function, stored on the function object, and reused on every call.
+
+Think of it like an office coffee mug. One person fills it, drinks, and leaves it dirty. The next person finds yesterday's coffee and top it off. That is what mutable defaults do: they persist because the default expression runs only at definition time, not at call time.
 
 <SLabel>Core answer</SLabel>
 
@@ -31,7 +33,7 @@ print(append_item("b"), id(append_item.__defaults__[0]))
 
 The object identity stays the same across calls. That is the whole bug.
 
-This is language semantics, not a CPython accident. CPython simply makes the behavior visible through `__defaults__`.
+This is language semantics, baked into the function definition contract. `__defaults__` merely makes it observable.
 
 <SLabel>Version context</SLabel>
 

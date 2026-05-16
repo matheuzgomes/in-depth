@@ -1,4 +1,6 @@
-`list` is the default Python sequence because it is flexible, indexed, and easy to mutate. It is not the right data structure when the real workload is numeric storage, queue operations at the left edge, or zero-copy binary slicing.
+You reach for `list` by reflex every time you need an ordered collection. And that is usually fine — until you store a million floats and wonder why memory is exploding, or you pop from the left and wonder why it is so slow. `list` is a generalist, not a specialist.
+
+Think of `list` like a universal toolbox drawer: great for mixed contents, easy to reorganize. But when you need to store 10,000 screws, a dedicated organizer (`array.array`) uses a fraction of the space. When you need fast access from both ends, a bucket on a rope (`collections.deque`) beats pulling every tool out from the front.
 
 <SLabel>Core answer</SLabel>
 

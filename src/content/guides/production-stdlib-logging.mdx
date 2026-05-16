@@ -1,4 +1,6 @@
-The standard library [`logging`](https://docs.python.org/3/library/logging.html) package is a hierarchical event pipeline: loggers create records, filters decide what continues, handlers emit, and formatters render. Production logging quality depends less on calling `log.info(...)` and more on understanding propagation, lazy formatting, and failure boundaries.
+You call `logging.info("done")` and the message appears. But when it does not appear, the hard question is: where in the pipeline did it get lost? Loggers, handlers, filters, and formatters form a chain, and a record only makes it to your output if every link cooperates.
+
+Think of the logging module like a postal sorting facility. The logger is the postal worker who decides whether a letter needs processing. The filter is the sorting machine that discards junk mail. The handler is the delivery truck that transports the letter. The formatter is the label printer that stamps the destination. One broken link and the letter never arrives.
 
 <SLabel>Core answer</SLabel>
 

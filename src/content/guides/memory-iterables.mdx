@@ -1,6 +1,8 @@
 import { loopTraversalSimulation } from "@/data/simulations"
 
-An iterable is anything Python can call `iter()` on. The production question is not just "can I loop over it?" but "does it materialize all values, can it be replayed, and what state stays alive while iteration is in progress?"
+An iterable is anything Python can call `iter()` on — lists, files, generators, database cursors. Every `for` loop works the same on the surface. The difference is what happens underneath: does it build the whole result in memory first, or does it produce values one at a time as you consume them?
+
+Think of a `list` like a DVD — the whole movie exists on the disc, you can skip to any chapter, rewind, and watch it again. A generator is a live broadcast — you get what is playing right now, you cannot rewind, and when the broadcast ends there is nothing left to tune into. Both play video. One materializes everything upfront; the other streams.
 
 <SLabel>Core answer</SLabel>
 
@@ -75,7 +77,7 @@ This is fundamentally different from a container or a flat sequence. A list of `
 The `gi_frame.yieldfrom` field (or `cr_frame.yieldfrom` for coroutines) tracks the sub-iterator when `yield from` is used, creating a chain of suspended frames.
 
 <Callout type="info">
-  Ramalho (Fluent Python, 2nd ed., Ch. 17) emphasizes that generator-based coroutines and native coroutines both rely on this same suspension model. The frame is the "suspension unit" — the language creates one frame per active generator, and the frame's liveness determines the memory footprint. The <code>yield from</code> construct (and <code>await</code> in native coroutines) chains these frames together without additional allocation.
+  Generator-based coroutines and native coroutines both rely on the same suspension model. The frame is the "suspension unit" — the language creates one frame per active generator, and the frame's liveness determines the memory footprint. The <code>yield from</code> construct (and <code>await</code> in native coroutines) chains these frames together without additional allocation.
 </Callout>
 
 <SLabel>Container, flat, and streaming models</SLabel>
@@ -170,4 +172,5 @@ For compact storage choices, see <CardRef id="memory-list-alternatives" />. For 
 - [itertools.tee](https://docs.python.org/3/library/itertools.html#itertools.tee)
 - [CPython source: Objects/genobject.c](https://github.com/python/cpython/blob/main/Objects/genobject.c)
 - [CPython source: Python/ceval.c](https://github.com/python/cpython/blob/main/Python/ceval.c)
-- Fluent Python, 2nd ed., Ch. 17: Iterables, Iterators, and Generators — covers the iterator protocol, generator suspension mechanics, and `yield from`
+- [Iterator protocol docs](https://docs.python.org/3/library/stdtypes.html#iterator-types)
+- [Generator function reference](https://docs.python.org/3/reference/expressions.html#yield-expressions)

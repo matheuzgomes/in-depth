@@ -1,4 +1,6 @@
-`del` removes a binding or container slot. It does not mean "destroy this object now." Object lifetime is governed by reachability, and the timing of reclamation depends on the interpreter.
+You wrote `del payload` expecting the object to vanish instantly. The object is still there — `alias` still points to it. `del` removes a name, not an object.
+
+Think of `del` like returning a library book to the returns slot. You have removed your association with the book, but the book still exists on the cart until the librarian (the interpreter) processes it. If someone else still has the same book checked out (another reference), it never even reaches the cart. The object lives as long as any reference points to it.
 
 <SLabel>Core answer</SLabel>
 
@@ -28,7 +30,7 @@ print(gc.get_threshold())
 print(gc.get_count())
 ```
 
-Those thresholds and counters are CPython runtime tuning details, not language guarantees. They exist because pure reference counting cannot reclaim unreachable cycles.
+Those thresholds and counters are CPython runtime tuning details rather than language guarantees. They exist because pure reference counting cannot reclaim unreachable cycles.
 
 ```python
 # [CURRENT - 3.10-3.14] Works on Python 3.x
@@ -61,7 +63,7 @@ The GC algorithm tracks container objects (those that can participate in cycles:
 During collection, the GC performs a reference-count subtraction phase to identify truly unreachable objects in a cycle, then calls the finalizer (if any) and reclaims the memory. Objects with `__del__` methods complicate this process because Python cannot safely determine the order of finalizer calls in a cycle, which is why cyclic references involving `__del__` are moved to `gc.garbage` (Python 3.3 and earlier) or handled via the `weakref.finalize` mechanism.
 
 <Callout type="info">
-  Ramalho (Fluent Python, 2nd ed., Ch. 6) advises using <code>weakref.finalize</code> instead of <code>__del__</code> for cleanup callbacks. The <code>weakref.finalize</code> object is a first-class handle that can be queried with <code>.alive</code>, detached with <code>.detach()</code>, and does not resurrect the object or create the same cyclical headaches that raw <code>__del__</code> methods do.
+  Use <code>weakref.finalize</code> instead of <code>__del__</code> for cleanup callbacks. The <code>weakref.finalize</code> object is a first-class handle that can be queried with <code>.alive</code>, detached with <code>.detach()</code>, and does not resurrect the object or create the same cyclical headaches that raw <code>__del__</code> methods do. See the <a href="https://docs.python.org/3/library/weakref.html#weakref.finalize">weakref.finalize docs</a>.
 </Callout>
 
 <SLabel>Finalization and weak references</SLabel>
@@ -149,4 +151,5 @@ For finalization without ownership, prefer `weakref.finalize`. For handler/file 
 - [Data model: object finalization](https://docs.python.org/3/reference/datamodel.html#object.__del__)
 - [CPython source: Modules/gcmodule.c](https://github.com/python/cpython/blob/main/Modules/gcmodule.c)
 - [CPython source: Objects/object.c](https://github.com/python/cpython/blob/main/Objects/object.c)
-- Fluent Python, 2nd ed., Ch. 6: Object References, Mutability, and Recycling — covers `del`, weak references, the GC, and the `__del__` hazards
+- [weakref.finalize docs](https://docs.python.org/3/library/weakref.html#weakref.finalize)
+- [gc module docs](https://docs.python.org/3/library/gc.html)

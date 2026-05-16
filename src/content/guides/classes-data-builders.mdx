@@ -1,4 +1,6 @@
-Python gives you several ways to build record-like objects, but they do not have the same runtime shape or API implications. The meaningful axes are tuple compatibility, mutability, memory layout, generated behavior, and how much future evolution pressure the type can tolerate.
+Python gives you several ways to build record-like objects: `namedtuple`, `NamedTuple`, `@dataclass`. They look similar on the surface but produce fundamentally different runtime shapes. Pick wrong and you lock in the wrong mutability, memory layout, or evolution story.
+
+Think of these as different tools in a machine shop. `namedtuple` is a shipping label — lightweight, stuck to a tuple underneath, immutable by nature. `NamedTuple` is the same label but with type annotations printed on it. `@dataclass` is a full assembly line — you get a real class with all the generated methods, control over mutability, and room to grow.
 
 <SLabel>Core answer</SLabel>
 

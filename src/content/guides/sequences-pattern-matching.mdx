@@ -1,6 +1,8 @@
 import { patternMatchingSimulation } from "@/data/simulations"
 
-Sequence pattern matching is structural dispatch. It is useful when the first question is "what shape is this object?" rather than "which boolean predicate is true?"
+A command arrives as a list of strings. You check its length, compare the first element, pull out the second and third by index. Three lines of boilerplate before you reach the real logic. Pattern matching collapses that into one branch.
+
+Think of it like a package sorting machine. You drop a box on the belt, and the machine checks its shape first. If it is a small cube, it goes to bin A. If it is a long tube, bin B. The shape is checked before you open the box. That is what sequence patterns do — they branch on structure and bind names to positions only when the shape matches.
 
 <SLabel>Core answer</SLabel>
 
@@ -68,7 +70,7 @@ print(parse_row(["Ana", "a@example.com", "admin", "billing"]))
 
 <SLabel>What counts as a sequence pattern</SLabel>
 
-Sequence patterns are for actual sequence-like subjects. They do not treat `str`, `bytes`, or `bytearray` as sequences of characters or bytes for matching, even though those objects are iterable.
+Sequence patterns require sequence-like subjects. `str`, `bytes`, and `bytearray` are excluded from sequence matching despite being iterable — call `.split()` or similar to convert before matching.
 
 ```python
 # [CURRENT - 3.10-3.14] Requires Python 3.10+ [PEP 634]

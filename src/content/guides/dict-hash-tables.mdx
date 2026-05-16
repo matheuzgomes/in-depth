@@ -1,6 +1,8 @@
 import { dictLookupSimulation } from "@/data/simulations"
 
-Dictionaries are Python's general-purpose hash table. They trade memory for fast keyed access, and they also underpin object namespaces, module globals, and many instance attribute dictionaries.
+Dictionaries are Python's general-purpose hash table. They trade memory for fast keyed access, and they also underpin object namespaces, module globals, and many instance attribute dictionaries. Every time you access `obj.attr` or call a function, a dict is involved somewhere.
+
+Think of a dict like a library card catalog. You look up a title (hash the key), find the exact shelf location, and walk straight to it. No scanning every book. The cost is the catalog itself — the hash table reserves extra space to keep lookups fast, which is why a dict with 10,000 entries uses more memory than a list with 10,000 entries.
 
 <SLabel>Core answer</SLabel>
 
@@ -20,7 +22,7 @@ except TypeError as exc:
     print(exc)
 ```
 
-Average-case lookup is effectively constant time because Python computes the hash and probes the hash table directly. It is not a promise that every lookup costs the same or that memory overhead is small.
+Average-case lookup is effectively constant time because Python computes the hash and probes the hash table directly. Worst-case behavior happens when many keys collide (bad hash function), and memory overhead grows with the sparse hash table — not a problem, just a tradeoff to know.
 
 <DictLookupSimulation data={dictLookupSimulation} />
 
@@ -56,7 +58,7 @@ except TypeError as exc:
     print(exc)
 ```
 
-A bad hash function does not break correctness, but it destroys performance. Fluent Python (Ramalho, 2022, Ch. 3) demonstrates this by noting that `hash(1) == hash(1.0) == hash(True)` all produce the same hash because Python's `int`, `float`, and `bool` types are all part of the numeric tower and compare equal across types. That means `{1: "int", 1.0: "float"}` has only one key — the second insertion overwrites the first.
+A bad hash function does not break correctness, but it destroys performance. `hash(1) == hash(1.0) == hash(True)` all produce the same hash because Python's `int`, `float`, and `bool` types are all part of the numeric tower and compare equal across types. That means `{1: "int", 1.0: "float"}` has only one key — the second insertion overwrites the first.
 
 ```python
 # [CURRENT - 3.10-3.14] Works on Python 3.x
@@ -66,7 +68,7 @@ d[1.0] = "float"
 print(d)  # {1: 'float'}
 ```
 
-That is not a bug: it follows from the numeric-comparison contract in the data model. Two values that compare equal must share the same dict slot.
+This follows from the numeric-comparison contract in the data model: two values that compare equal must share the same dict slot.
 
 <SLabel>CPython internals</SLabel>
 
@@ -100,7 +102,7 @@ That is exactly 2/3. A dict with `dk_size = 8` can hold `USABLE_FRACTION(8) = 5`
 CPython also implements **key-sharing dictionaries** ([PEP 412](https://peps.python.org/pep-0412/), `Objects/dictobject.c` lines 90-130). When instances of the same class define attributes in the same order (as in a typical `__init__`), they share the `PyDictKeysObject` — the `dk_indices` and `dk_entries` arrays — and each instance stores only its values in a separate `ma_values` array. This saves the keys-array overhead for every instance. The requirement is stable: define the same attributes in the same order in `__init__`. Adding attributes dynamically later forces the instance into a combined-table layout, losing the sharing optimization.
 
 <Callout type="info">
-  The compact dict was introduced in CPython 3.6 and became a language guarantee in Python 3.7. Ramalho (Fluent Python, 2nd ed., Ch. 3) notes that this change saved roughly 58% memory for a typical dict compared with the old combined-table layout, and it also gave the preservation of insertion order as a side effect of the dense-entries array.
+  The compact dict was introduced in CPython 3.6 and became a language guarantee in Python 3.7. The change saved roughly 58% memory for a typical dict compared with the old combined-table layout, and it also added preservation of insertion order as a side effect of the dense-entries array.
 </Callout>
 
 <SLabel>Memory cost and growth</SLabel>
@@ -231,4 +233,4 @@ else:
 - [CPython source: Objects/dictobject.c](https://github.com/python/cpython/blob/main/Objects/dictobject.c)
 - [CPython developer guide: dict implementation notes](https://devguide.python.org/internals/exploring/)
 - [sys.getsizeof](https://docs.python.org/3/library/sys.html#sys.getsizeof)
-- Fluent Python, 2nd ed., Ch. 3: Dictionaries and Sets — covers the compact dict, key-sharing, and the numeric-tower hash collision pattern
+- [Mapping types: dict](https://docs.python.org/3/library/stdtypes.html#mapping-types-dict)

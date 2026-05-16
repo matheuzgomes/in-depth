@@ -1,13 +1,15 @@
 import { asyncLimitsTimelineData } from "@/data/simulations"
 
-This guide covers the chapter-21 boundary layer: what async can and cannot do, why CPU-bound work still starves the event loop, and how to type async protocols without collapsing everything into unhelpful `Any`.
+You write `async def` and suddenly every function becomes a coroutine. But async is not free. CPU-bound work still starves the event loop, and type annotations collapse to `Any` without the right protocol types.
+
+Think of async like a restaurant kitchen with one chef. When every order is quick prep plus waiting for ingredients, the chef handles dozens of tables. But when one order requires 30 minutes of continuous stove time, every other table waits. That is the limit of cooperative concurrency: a single long CPU task blocks everyone.
 
 <SLabel>Core answer</SLabel>
 
 Async Python is a concurrency model for **waiting workloads**.
 
 - it helps when work spends time waiting for sockets, timers, subprocesses, or other external readiness
-- it does not make CPU-bound Python bytecode run in parallel inside one event-loop thread
+- CPU-bound Python bytecode still runs exclusively inside one event-loop thread
 - it needs accurate protocol types if you want APIs to stay clear under maintenance
 
 ```python
@@ -48,8 +50,8 @@ This function is legal async code, but operationally it is a bad citizen. Once i
 That is the important engineering boundary:
 
 - async improves overlap for waiting workloads
-- it does not replace process-based CPU parallelism
-- it does not compensate for a blocking library hidden behind async syntax
+- process-based CPU parallelism requires `multiprocessing` or similar
+- a blocking library behind async syntax still freezes the loop
 
 <SLabel>Mechanism: why the loop stalls</SLabel>
 

@@ -1,6 +1,8 @@
 import { containerComparisonLabData } from "@/data/simulations"
 
-This is the top-level container choice guide for `list`, `tuple`, `set`, and `array.array`. The right question is not "which one is fastest?" but "which representation matches the workload?" These containers solve different problems, and the memory/performance costs are consequences of those different contracts.
+You need to store a collection of values. `list` works. But `tuple`, `set`, and `array.array` also work — and each one makes different tradeoffs under the hood. Picking by surface syntax (square brackets vs. curly braces) means you get the memory and performance characteristics by accident, not by design.
+
+Think of containers like vehicles. A `list` is a pickup truck — versatile, carries anything, can add more cargo. A `tuple` is a courier motorcycle — fixed load, lightweight, no room for extra boxes. A `set` is a bus — optimized for finding whether a passenger is on board, not for seating order. An `array.array` is a tanker truck — carries only one type of cargo but does it with maximum density.
 
 <SLabel>Core answer</SLabel>
 
@@ -97,7 +99,7 @@ Everything else is a tradeoff between ordered mutation, fixed shape, and API exp
 
 `list` is resizable. On current CPython, the list object points to a separately managed reference array, and that array usually has spare capacity so append-heavy code does not reallocate on every push.
 
-`set` is not a sequence at all. It is a hash table specialized for uniqueness and membership. It spends memory on spare buckets because fast lookup is its primary job.
+`set` is a hash table specialized for uniqueness and membership. It spends memory on spare buckets because fast lookup is its primary job.
 
 `array.array` is different from all three. It stores raw C values packed side by side under a chosen typecode such as `"I"` or `"d"`. That is why it can be dramatically smaller for dense numeric workloads.
 
@@ -142,7 +144,7 @@ The key insight from the CPython C source is the difference in allocation patter
 - `array.array` does one or two allocations; growth reallocates the raw C buffer, copying the raw bytes
 
 <Callout type="info">
-  Ramalho (Fluent Python, 2nd ed., Ch. 2) describes the list overallocation pattern as "a compromise between the two extremes: too little overallocation wastes append performance; too much wastes memory." The exact formula is implementation-specific, but the tradeoff is a fundamental property of dynamic arrays.
+  The list overallocation pattern is a compromise: too little overallocation wastes append performance; too much wastes memory. The exact formula is implementation-specific, but the tradeoff is a fundamental property of dynamic arrays.
 </Callout>
 
 <SLabel>Measured memory proof</SLabel>
@@ -251,7 +253,7 @@ Membership over `10000` elements, measured locally with `timeit` over `10000` lo
   </tbody>
 </table>
 
-The stable lesson is not the exact timing numbers. It is the algorithmic model:
+The stable lesson is the algorithmic model:
 
 - `list`, `tuple`, and `array.array` answer membership by scanning
 - `set` answers membership by hashing and probing
@@ -453,4 +455,4 @@ For deeper internals and adjacent structures:
 - [CPython source: Objects/tupleobject.c](https://github.com/python/cpython/blob/main/Objects/tupleobject.c)
 - [CPython source: Objects/setobject.c](https://github.com/python/cpython/blob/main/Objects/setobject.c)
 - [CPython source: Modules/arraymodule.c](https://github.com/python/cpython/blob/main/Modules/arraymodule.c)
-- Fluent Python, 2nd ed., Ch. 2: An Array of Sequences — covers list/tuple layout, overallocation, and array.array tradeoffs
+- [Sequence types: list, tuple, range](https://docs.python.org/3/library/stdtypes.html#sequence-types-list-tuple-range)

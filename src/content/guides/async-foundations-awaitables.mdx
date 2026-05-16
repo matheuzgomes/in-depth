@@ -1,6 +1,8 @@
 import { asyncFoundationsTimelineData } from "@/data/simulations"
 
-This guide covers the chapter-21 foundation layer: definitions, awaitables, native coroutines, Guido's reading trick, the generator lineage under `await`, and the all-or-nothing constraint of asynchronous design.
+`await` suspends your function until something else is ready. That is the core idea, but it takes time to internalize what suspension really means — your function pauses, the event loop runs other work, and control comes back to you when the awaited result is ready.
+
+Think of `await` like ordering coffee at a busy café. You place your order (start the operation), step aside from the counter (suspend), and the barista calls your name when it is ready (resume). While you wait, other customers can order and receive their drinks. That is cooperative concurrency: you yield the counter willingly, trusting that you will be served when your drink is ready.
 
 <SLabel>Core answer</SLabel>
 
@@ -10,7 +12,7 @@ The async keywords give Python a native way to express **cooperative suspension*
 - calling it creates a coroutine object
 - `await` suspends that coroutine until another awaitable produces a result
 
-The right mental model is not "async makes things parallel." The right mental model is:
+The right mental model for async is cooperative suspension:
 
 - your coroutine runs
 - it reaches `await`
@@ -105,17 +107,15 @@ The important design fact is that `await` is about protocol, not spelling. If an
 
 Native coroutines look like a completely new feature, but the mechanism did not appear from nowhere. `await` inherits much of its coroutine-driving behavior from generator machinery.
 
-That does **not** mean you should think of modern async code as "just generators." It means:
-
-- the implementation lineage matters
-- suspension/resumption is the essential idea
-- the event loop is what drives that process in asyncio programs
+That helps explain the implementation lineage, but modern async code is more than "just generators." The key ideas are:
+- suspension and resumption
+- the event loop that drives the process
 
 The official language-level contract is the async/await behavior itself. The exact internal steps, bytecode, and event-loop plumbing are interpreter and library implementation detail.
 
 <SLabel>The all-or-nothing problem</SLabel>
 
-Fluent Python emphasizes a real production constraint: asynchronous design is not a small cosmetic switch. If one critical layer blocks, the benefit collapses.
+A critical production constraint: asynchronous design is not a small cosmetic switch. If one critical layer blocks, the benefit collapses.
 
 ```python
 # [CURRENT - 3.10-3.14] Works on Python 3.x

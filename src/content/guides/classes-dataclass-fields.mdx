@@ -1,4 +1,6 @@
-`@dataclass` is a code generator driven by annotations and field declarations. The important technical questions are not "does it make classes shorter?" but "which methods does it synthesize, what storage model does it imply, and what invariants does it leave entirely to me?"
+You have written a class with `__init__`, `__repr__`, `__eq__` boilerplate more times than you can count. `@dataclass` eliminates that busywork. The important technical questions are which methods it synthesizes, what storage model it implies, and what invariants it leaves entirely to you.
+
+Think of a dataclass like a factory machine. You feed it a blueprint (annotations and `field()` declarations) and it stamps out a class with `__init__`, `__repr__`, `__eq__`, and optional ordering — all generated from the field list. The machine handles the repetitive welding. You still own the design.
 
 <SLabel>Core answer</SLabel>
 

@@ -1,6 +1,8 @@
 import { asyncBackpressureTimelineData } from "@/data/simulations"
 
-This guide covers the chapter-21 operational middle: asynchronous context managers, completion-order processing, semaphores, multiple in-flight requests, and delegating blocking boundaries to executors or helper threads.
+You have `await` working. Now you need to manage resource lifecycles, bound concurrency, and handle results in completion order. These are the patterns that separate toy async code from production async code.
+
+Think of an async context manager like an automated parking garage gate. Entering (`__aenter__`) takes time — the gate lifts, you get a ticket. Exiting (`__aexit__`) also takes time — you pay, the gate lifts. Both operations may need to wait, and that waiting is part of the protocol. That is why network clients, file handles, and database sessions all use `async with`.
 
 <SLabel>Core answer</SLabel>
 

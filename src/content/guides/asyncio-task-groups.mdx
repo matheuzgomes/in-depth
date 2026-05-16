@@ -1,4 +1,6 @@
-[`asyncio`](https://docs.python.org/3/library/asyncio.html) is Python's cooperative concurrency framework for I/O-bound work. It does not make CPU-bound Python code parallel by itself; it lets one thread keep making progress while tasks are waiting.
+You fire off several `asyncio` tasks with `gather` and hope nothing fails. But when one task raises, the others keep running — or get orphaned. `TaskGroup` solves that with structured concurrency: tasks that belong together fail together.
+
+Think of a `TaskGroup` like a shipping container manifest. Every item in the container is listed on the same sheet. If one item is damaged, the whole container is flagged for inspection. That is structured concurrency — parent and child tasks share a fate.
 
 <SLabel>Core answer</SLabel>
 
@@ -44,11 +46,11 @@ async def main():
 asyncio.run(main())
 ```
 
-CPython details such as selector/proactor implementations and internal task objects are not the portable contract. The durable rules are the semantics of coroutines, tasks, cancellation, and the documented `asyncio` APIs.
+CPython details such as selector/proactor implementations and internal task objects are implementation-specific. The durable rules are the semantics of coroutines, tasks, cancellation, and the documented `asyncio` APIs.
 
 <SLabel>TaskGroup failure semantics</SLabel>
 
-`TaskGroup` is not just a task collector. Its key value is structured failure handling. The official docs specify:
+`TaskGroup` provides structured failure handling. The official docs specify:
 
 - if one child task fails with a non-cancellation exception, the remaining tasks are cancelled
 - once the group exits, those failures are raised as an `ExceptionGroup` or `BaseExceptionGroup`

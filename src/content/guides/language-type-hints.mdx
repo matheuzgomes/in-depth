@@ -1,4 +1,6 @@
-Type hints are design-time contracts for readers, editors, and static analyzers. They do not enforce runtime correctness unless your code adds validation or dispatch behavior that consumes the annotations.
+Type hints are design-time contracts for readers, editors, and static analyzers. At runtime, Python ignores them — `def double(x: int) -> int: return x * 2` happily accepts `double("ha")` and returns `"haha"`. The hints guide tools, not the interpreter.
+
+Think of type hints like blueprint annotations. An architect writes dimensions on a plan, but the construction crew does not measure every wall against the blueprint at build time — they build, and the blueprint catches mistakes before anything is built. Static type checkers (mypy, pyright) are the inspectors who read the plan and flag problems before your code runs.
 
 <SLabel>Core answer</SLabel>
 
@@ -50,7 +52,7 @@ def safer(value: object):
     return repr(value)
 ```
 
-Parameterized built-in generics such as `list[int]` are for annotation meaning, not runtime `isinstance` checks.
+Parameterized built-in generics such as `list[int]` carry annotation meaning only — `isinstance` rejects them at runtime.
 
 ```python
 # [OLDER / 3.9, CURRENT - 3.10-3.14] Works on Python 3.9+ [PEP 585]

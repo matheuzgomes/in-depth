@@ -1,6 +1,6 @@
 import { bytecodeLabData } from "@/data/simulations"
 
-Python bytecode is the instruction stream CPython executes after compiling source into a code object. It is one of the most useful interpreter-level tools for explaining why code behaves the way it does, but it is also one of the easiest places to overclaim. Bytecode can explain **execution shape**. It does not replace measurement, algorithm analysis, or knowledge of C-level built-ins.
+Python bytecode is the instruction stream CPython executes after compiling source into a code object. It is like reading the assembly output of a C compiler — you see the exact steps the interpreter takes. Bytecode explains execution shape: which names are loaded as locals versus globals, whether a comprehension gets its own opcode, how Python dispatches a match statement. But it is not a substitute for measurement, algorithm analysis, or knowledge of C-level built-ins.
 
 <SLabel>Core answer</SLabel>
 
@@ -21,12 +21,11 @@ def total(xs):
 dis.dis(total)
 ```
 
-The critical boundary is this:
+Keep the boundary clear:
 
-- bytecode is **CPython interpreter work**
-- it is not the same thing as machine code
+- bytecode is **CPython interpreter work**, not machine code
 - fewer or simpler bytecode steps can reduce overhead
-- but real performance still depends on data structure choice, object allocation, C-level built-ins, specialization, and algorithmic complexity
+- but real performance depends on data structure choice, object allocation, C-level built-ins, specialization, and algorithmic complexity
 
 <BytecodeLab data={bytecodeLabData} />
 
@@ -60,7 +59,7 @@ print(fn.__code__.co_freevars)
 print(fn.__code__.co_consts)
 ```
 
-This is not just trivia. It tells you what the interpreter thinks your function depends on:
+This is practical information: it tells you what the interpreter thinks your function depends on:
 
 - fast locals
 - global names
@@ -95,7 +94,7 @@ fn = outer()
 dis.dis(fn)
 ```
 
-On current CPython, that closure read shows up as `LOAD_DEREF`, while a plain local read shows up as `LOAD_FAST`. That does **not** mean closure code is inherently "bad." It means the interpreter is following a different semantic path because the name lives in a closure cell, not the fast-locals array.
+On current CPython, that closure read shows up as `LOAD_DEREF`, while a plain local read shows up as `LOAD_FAST`. The difference is purely semantic — the interpreter follows a different path because the name lives in a closure cell, not the fast-locals array.
 
 See also <CardRef id="language-decorators-closures" /> for the scope side of the same mechanism.
 
@@ -137,7 +136,7 @@ The cache entries show up as inline metadata between opcodes. They are not real 
 This is why local variable access is fast: `LOAD_FAST` is a direct C array access by index, while `LOAD_GLOBAL` requires a dict lookup and `LOAD_DEREF` requires following a chain of closure cell objects.
 
 <Callout type="info">
-  Ramalho (Fluent Python, 2nd ed., Ch. 23) describes bytecode as "the C level you can read from Python." The <code>dis</code> module is the bridge between high-level syntax and the interpreter's execution model. He recommends using it diagnostically — to answer a specific question about execution shape — rather than as a routine optimization tool.
+  The <code>dis</code> module is the bridge between high-level syntax and the interpreter's execution model. Use it diagnostically — to answer a specific question about execution shape — rather than as a routine optimization tool.
 </Callout>
 
 <SLabel>How to use the dis module</SLabel>
@@ -342,4 +341,4 @@ Good production practice:
 - [CPython source: Python/ceval.c](https://github.com/python/cpython/blob/main/Python/ceval.c)
 - [CPython source: Objects/frameobject.c](https://github.com/python/cpython/blob/main/Objects/frameobject.c)
 - [PEP 659: Specializing Adaptive Interpreter](https://peps.python.org/pep-0659/)
-- Fluent Python, 2nd ed., Ch. 23: Attribute Descriptors and the `__getattr__` protocol (includes bytecode-level discussion of attribute access patterns)
+- [dis module docs](https://docs.python.org/3/library/dis.html)

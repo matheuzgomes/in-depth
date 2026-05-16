@@ -1,4 +1,6 @@
-Python names are bindings to objects, not boxes that contain values. That one fact explains aliasing, mutation leaks, the meaning of `is`, and why `==` can be arbitrarily expensive while `is` is trivial.
+You wrote `a = [1, 2]`, then `b = a`, then `c = [1, 2]`. Mutating `a` changed `b` but not `c`. Every Python developer hits this early and wonders whether `==` and `is` are the same thing. They are not — and the difference is central to the object model.
+
+Think of Python variables like sticky notes, not boxes. Assignment does not put a value into a container — it sticks a name onto an object. Multiple sticky notes can point to the same object. `==` asks whether two objects consider themselves equal. `is` asks whether two sticky notes point to the exact same object — a single machine instruction, no method dispatch.
 
 <SLabel>Core answer</SLabel>
 
@@ -51,7 +53,7 @@ alias["roles"].append("billing")
 print(profile["roles"])  # ['admin', 'billing']
 ```
 
-That is not a bug in Python; it is the object model. The bug is failing to decide whether shared mutation is intended.
+This is the object model at work. The mistake is relying on shared mutation without deciding whether it is intentional.
 
 <SLabel>Version context</SLabel>
 

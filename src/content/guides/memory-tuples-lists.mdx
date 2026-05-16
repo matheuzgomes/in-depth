@@ -1,10 +1,12 @@
-Lists and tuples are both container sequences, but they are optimized for different contracts. A tuple is a fixed-size record of object references. A list is a resizable array of object references with spare capacity reserved for future mutation.
+You have used tuples for "immutable lists" and lists for "mutable sequences." That is true at the surface, but it misses the deeper design: a tuple is a fixed-size record where position encodes meaning, while a list is a resizable array with spare capacity for growth.
+
+Think of a tuple like a shipping crate welded shut. The crate arrives with exactly N compartments — you cannot add compartments, but you can open the boxes inside and change their contents. A list is like a cargo container with expandable walls. Every time you append, the walls push outward a bit, reserving extra room so the next append is fast.
 
 <SLabel>Core answer</SLabel>
 
 Use a tuple when the size and ordering are part of the meaning of the value. Use a list when the collection is expected to grow, shrink, reorder, or be mutated in place.
 
-Both containers store references, not inline Python values. The distinction is not "tuple stores data directly, list stores pointers." Both store pointers to Python objects. The difference is that a tuple stores exactly `n` reference slots inside the tuple object, while a list stores a pointer to a separately managed resizable reference array.
+Both containers store references to Python objects. The real difference: a tuple stores exactly `n` reference slots inside the tuple object, while a list stores a pointer to a separately managed resizable reference array.
 
 ```python
 # [CURRENT - 3.10-3.14] Works on Python 3.x
@@ -29,7 +31,7 @@ print(record)
 
 On CPython, the tuple object contains its header and its item-reference slots in one fixed-size allocation. A list object contains its own header plus a pointer to a separate dynamically allocated array of item references. That extra indirection is what makes resizing possible.
 
-This is CPython-specific implementation detail, not a language guarantee. The language-level contract is only mutability and sequence behavior. The memory layout and exact byte counts can differ across interpreter versions, builds, and implementations such as PyPy.
+This is CPython-specific implementation detail. The language-level contract is only mutability and sequence behavior. The memory layout and exact byte counts can differ across interpreter versions, builds, and implementations such as PyPy.
 
 For a 64-bit CPython 3.12.3 build, the container-only cost measured with [`sys.getsizeof`](https://docs.python.org/3/library/sys.html#sys.getsizeof) looks like this:
 
@@ -130,7 +132,7 @@ print(list(l) is l)   # False -> new list created
 **Constant folding.** The compiler (`Python/compile.c`) folds tuple literals of constants into a single code-object constant. A function returning `(1, 2, 3)` uses `RETURN_CONST` to return the pre-built tuple. A function returning `[1, 2, 3]` must build the list at runtime because lists are mutable.
 
 <Callout type="info">
-  Ramalho (Fluent Python, 2nd ed., Ch. 2) calls this the "tuple as record" vs "tuple as immutable list" duality. The tuple-as-record pattern uses positional unpacking and field names via <code>NamedTuple</code>. The tuple-as-immutable-list pattern is what most programmers reach for when they need an unchangeable sequence. The CPython allocation optimization (one contiguous block) is a bonus, not the primary design goal.
+  Two patterns exist: "tuple as record" (positional unpacking, field names via <code>NamedTuple</code>) and "tuple as immutable list" (an unchangeable sequence). The CPython allocation optimization (one contiguous block) is a bonus, not the primary design goal — the language contract is immutability and fixed size.
 </Callout>
 
 <SLabel>Allocation and performance</SLabel>
@@ -266,4 +268,5 @@ If the shape needs field names, not positional indexing, prefer `NamedTuple` or 
 - [Data model: objects, values, and types](https://docs.python.org/3/reference/datamodel.html#objects-values-and-types)
 - [CPython source: Objects/listobject.c](https://github.com/python/cpython/blob/main/Objects/listobject.c)
 - [CPython source: Objects/tupleobject.c](https://github.com/python/cpython/blob/main/Objects/tupleobject.c)
-- Fluent Python, 2nd ed., Ch. 2: An Array of Sequences — covers list overallocation, tuple layout, and the "tuple as record" pattern
+- [tuple and list docs](https://docs.python.org/3/library/stdtypes.html#tuple)
+- [sys.getsizeof](https://docs.python.org/3/library/sys.html#sys.getsizeof)

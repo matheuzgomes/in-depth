@@ -1,8 +1,8 @@
 import { specialMethodLabData } from "@/data/simulations"
 
-Python documentation calls them **special method names**. The community nickname is **dunder methods**, short for **double underscore** methods, because names such as `__eq__`, `__iter__`, and `__repr__` begin and end with `__`.
+Python documentation calls them **special method names**. The community nickname is **dunder methods**, short for **double underscore** methods, because names such as `__eq__`, `__iter__`, and `__repr__` begin and end with `__`. The nickname is fun but forgettable. What matters is what they do: they are how Python maps ordinary syntax and built-ins onto user-defined types.
 
-The important point is not the nickname. The important point is that these methods are how Python maps ordinary syntax and built-ins onto user-defined types.
+Think of dunder methods like electrical outlet shapes. A device with the right plug shape works in any socket, regardless of brand. `__iter__` is the two-prong plug — any class that implements it fits the `for` loop socket. `__len__` is the three-prong plug for `len()`. The language defines the socket shapes; your class provides the plugs.
 
 <SLabel>Core answer</SLabel>
 
@@ -51,7 +51,7 @@ That is why built-ins and syntax stay uniform:
 - if an object supports truth testing, `if obj:` can use it
 - if an object supports context management, `with obj:` can use it
 
-This is also why implementing a dunder method is not cosmetic. You are defining part of the public semantics of the type.
+That is why implementing a dunder method is never cosmetic. You are defining part of the public semantics of the type.
 
 <SLabel>CPython internals</SLabel>
 
@@ -96,7 +96,7 @@ This is why `NotImplemented` is important: it is the signal that the type does n
 **The `__iter__` fallback.** CPython's `iter()` built-in (`Python/bltinmodule.c`) first tries `__iter__` via `tp_iter`. If that slot is `NULL` (no `__iter__` defined), CPython falls back to `__getitem__` via `sq_item`, constructing a `PySeqIter_Type` iterator that calls `__getitem__` with increasing integer indices until `IndexError`.
 
 <Callout type="info">
-  Ramalho (Fluent Python, 2nd ed., Ch. 11) describes Python's protocol mechanism as "duck typing at the syntax level." The language does not require formal interface declarations. If a class implements <code>__len__</code> and <code>__getitem__</code>, it is a sequence. If it implements <code>__enter__</code> and <code>__exit__</code>, it is a context manager. This design reduces ceremony compared with formal interface systems found in Java or Go.
+  Python's protocol mechanism is duck typing at the syntax level. The language does not require formal interface declarations. If a class implements <code>__len__</code> and <code>__getitem__</code>, it is a sequence. If it implements <code>__enter__</code> and <code>__exit__</code>, it is a context manager. This design reduces ceremony compared with formal interface systems found in Java or Go.
 </Callout>
 
 <SLabel>Most used special methods</SLabel>
@@ -391,4 +391,4 @@ For related content:
 - [Context manager types](https://docs.python.org/3/reference/datamodel.html#context-managers)
 - [CPython source: Objects/typeobject.c](https://github.com/python/cpython/blob/main/Objects/typeobject.c)
 - [CPython source: Python/bltinmodule.c](https://github.com/python/cpython/blob/main/Python/bltinmodule.c)
-- Fluent Python, 2nd ed., Ch. 11: Special Methods and Protocols — covers the protocol-driven design, the type-level lookup mechanism, and the full protocol table
+- [Python data model: special method names](https://docs.python.org/3/reference/datamodel.html#special-method-names)

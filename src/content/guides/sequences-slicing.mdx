@@ -1,10 +1,12 @@
 import { slicingSimulation } from "@/data/simulations"
 
-Slicing is Python's compact notation for half-open ranges over sequences. It is not just syntax sugar: it encodes an interval model, drives copy behavior, and determines whether your code allocates a new object or mutates an existing sequence in place.
+You have written `items[n:m]` and trusted that `items[:n]` plus `items[n:]` covers every element exactly once. That trust is well placed — but only if you understand the interval model beneath the brackets.
+
+Think of slices like train cars. Each car has a number, but you board at the front edge of car N and get off at the front edge of car M. The car you exit is the one you do NOT ride. That is half-open: start included, stop excluded. The beauty is that `a[:n]` and `a[n:]` partition a list cleanly — no overlap, no gap, no off-by-one.
 
 <SLabel>Core answer</SLabel>
 
-Python slices use half-open intervals: `seq[start:stop]` includes `start` and excludes `stop`. That choice makes boundaries composable and length arithmetic simple.
+Python slices use half-open intervals: `seq[start:stop]` includes `start` and excludes `stop`. That choice makes boundaries composable and length arithmetic trivial.
 
 ```python
 # [CURRENT - 3.10-3.14] Works on Python 3.x
@@ -19,7 +21,7 @@ print(len(middle) == 5 - 2)
 print(head + tail == items)
 ```
 
-The excluded `stop` is why `seq[:x]` and `seq[x:]` partition a sequence without overlap or gaps. That is the real reason the convention survives: it keeps slicing algebra easy in production code.
+The excluded `stop` is why `seq[:x]` and `seq[x:]` partition without overlap or gaps. That is the real reason the convention survives: it keeps slicing algebra easy in production code.
 
 Negative indexes count from the end. Missing bounds mean "use the natural boundary." A negative step reverses traversal direction.
 

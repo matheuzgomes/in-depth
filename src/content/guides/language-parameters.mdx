@@ -1,4 +1,6 @@
-A Python function signature is executable API design. It controls how arguments bind, which names are public, whether options are explicit at the call site, and how much allocation or ambiguity each call introduces.
+A function signature is a contract you negotiate once and your callers pay for every time. A call site like `resize(img, 800, 600, False, 90)` is a maintenance problem waiting to surface — what does `False` mean here?
+
+Think of a signature like a physical key. A key cut wrong cannot enter the lock. Python's `/` and `*` markers cut your function's key so that wrong calls are rejected before the body runs. Positional-only (`/`) means callers cannot use keyword form for those parameters — you can rename them later without breaking anyone. Keyword-only (`*`) means callers must name those arguments, eliminating position confusion with booleans and flags.
 
 <SLabel>Core answer</SLabel>
 
@@ -12,7 +14,7 @@ def resize(image, width, height, /, *, keep_aspect=True, quality=85):
 resize("photo.jpg", 800, 600, keep_aspect=False, quality=90)
 ```
 
-Keyword-only options are not cosmetic. They prevent opaque call sites such as `resize(img, 800, 600, False, 90)` where booleans and tuning numbers lose meaning.
+Keyword-only options prevent opaque call sites such as `resize(img, 800, 600, False, 90)` where booleans and tuning numbers lose meaning.
 
 <SLabel>Mechanism and binding</SLabel>
 

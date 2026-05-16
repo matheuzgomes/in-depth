@@ -1,4 +1,6 @@
-The recurring dict pattern is: find the bucket for a key, create it if missing, then mutate that bucket. Python gives you `setdefault` and `defaultdict` for this, but they are not interchangeable and they are not free of traps.
+The recurring dict pattern is: find the bucket for a key, create it if missing, then mutate that bucket. Python gives you `setdefault` and `defaultdict` for this, but they work differently — one evaluates its default eagerly and the other lazily.
+
+Think of `setdefault` like visiting a tool shed. You look for a wrench. If the wrench is there, you grab it. If not, you build one on the spot and hang it on the wall. The catch: you start building the wrench before checking whether it is already hanging on the wall. `defaultdict` is like a foreman who only sends someone to build when you report the tool is missing.
 
 <SLabel>Core answer</SLabel>
 

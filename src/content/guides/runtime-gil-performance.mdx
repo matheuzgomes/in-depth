@@ -1,6 +1,8 @@
 import { gilLabData } from "@/data/simulations"
 
-The GIL, or **global interpreter lock**, is one of the most important runtime constraints in CPython. It affects how threads behave, why some code scales across cores and some does not, and why "Python threading is slow" is both partly true and often poorly explained.
+The GIL, or **global interpreter lock**, is one of the most important runtime constraints in CPython. It affects how threads behave, why some code scales across cores and some does not, and why you have heard "Python threading is slow" without ever getting the full story.
+
+Think of the GIL like a single-lane bridge. Only one car (thread) crosses the bridge (executes Python bytecode) at a time. If a car stops to enjoy the view (waits on I/O), it pulls onto a rest area and releases the bridge for other cars. That is why I/O-bound threads work well but CPU-bound threads queue up. The bridge is not the problem — the bottleneck is what you are doing while on it.
 
 <SLabel>Core answer</SLabel>
 
@@ -80,29 +82,32 @@ import sys
 print(sys.getswitchinterval())
 ```
 
-That interval is not a promise of exact fairness or exact timing. It is a runtime tuning knob for how often Python threads are given a chance to switch, and the actual scheduling still depends on the operating system and on whether the current thread reaches a point where switching can happen.
+The switch interval is a runtime tuning knob for how often Python threads are given a chance to switch. Actual scheduling depends on the operating system and on whether the current thread reaches a point where switching can happen — it is a best-effort interval, not a deterministic guarantee.
 
 **Per-interpreter GIL ([PEP 684](https://peps.python.org/pep-0684/), Python 3.12+).** Starting in Python 3.12, CPython supports `Py_NewInterpreter()` creating sub-interpreters that each have their own GIL. This is implemented in `Python/pystate.c` — the GIL is stored per-interpreter in the `PyInterpreterState` struct, so threads running in different interpreters do not contend for the same lock. `InterpreterPoolExecutor` (Python 3.14) provides a high-level API for this.
 
 <Callout type="info">
-  Ramalho (Fluent Python, 2nd ed., Ch. 19) emphasizes distinguishing "concurrency" (dealing with many things at once) from "parallelism" (doing many things at once). The GIL makes this distinction concrete: threads provide concurrency for I/O-bound work but not parallelism for CPU-bound Python bytecode. Ramalho recommends processes, not threads, for CPU-bound parallelism in the regular CPython build.
+  Distinguish "concurrency" (dealing with many things at once) from "parallelism" (doing many things at once). The GIL makes this distinction concrete: threads provide concurrency for I/O-bound work but not parallelism for CPU-bound Python bytecode. Use processes for CPU-bound parallelism in the regular CPython build.
 </Callout>
 
-<SLabel>What the GIL does and does not guarantee</SLabel>
+<SLabel>GIL guarantees and limits</SLabel>
 
-The GIL protects CPython runtime internals. It does **not** mean:
+The GIL protects CPython runtime internals. What it guarantees:
 
-- your high-level operations are always atomic
-- your threaded program is race-free
-- compound operations on shared data are automatically correct
-- your API design can ignore locks and ownership
+- individual bytecode-level operations are internally consistent
+- the interpreter itself avoids corruption from concurrent access
+- most `Py_DECREF` calls and allocation paths are safe without additional locking
 
-For example, `x += 1` is not a magical atomic business operation just because the process has a GIL. It still represents multiple interpreter-level steps and can still be logically racy when multiple threads coordinate incorrectly.
+What it does not replace:
 
-This lines up with the newer glossary wording around atomic operations and race conditions: Python only guarantees atomicity where it is explicitly documented.
+- `x += 1` spans multiple bytecode steps and is not atomic
+- compound operations on shared data still need explicit synchronization
+- your threaded application code still needs locks for shared mutable state
+
+Python only guarantees atomicity where it is explicitly documented. For everything else, use `threading.Lock`.
 
 <Callout type="warn">
-  The GIL is not a substitute for synchronization in threaded application code. It protects the interpreter from many forms of corruption; it does not prove your shared-state logic is correct.
+  The GIL protects the interpreter from corruption. It does not protect your application's shared-state logic. Use explicit synchronization for shared mutable data.
 </Callout>
 
 <SLabel>How it affects performance</SLabel>
@@ -279,4 +284,5 @@ When performance matters:
 - [PEP 703: Making the Global Interpreter Lock Optional in CPython](https://peps.python.org/pep-0703/)
 - [CPython source: Python/ceval.c](https://github.com/python/cpython/blob/main/Python/ceval.c)
 - [CPython source: Python/pystate.c](https://github.com/python/cpython/blob/main/Python/pystate.c)
-- Fluent Python, 2nd ed., Ch. 19: Concurrency Models in Python — covers the GIL, threads, processes, and when each model wins
+- [Python glossary: GIL](https://docs.python.org/3/glossary.html#term-global-interpreter-lock)
+- [concurrent.futures docs](https://docs.python.org/3/library/concurrent.futures.html)

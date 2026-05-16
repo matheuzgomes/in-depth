@@ -1,6 +1,8 @@
 import { asyncIterationTimelineData } from "@/data/simulations"
 
-This guide covers the chapter-21 language constructs beyond plain `await`: asynchronous iteration, async iterables, async generator functions, async comprehensions, and async generator expressions.
+You know `async for` exists, and maybe you have used it once or twice. The real question is what happens under the hood: each iteration may suspend the event loop, yield control to other tasks, and resume when the next value arrives.
+
+Think of an async iterator like a newspaper delivery route. On a regular route (sync iterator), every house has the paper waiting — you drop and go. On an async route, some houses require buzzing the intercom and waiting for someone to answer. Each stop may pause your progress. `async for` is the route manager that handles that waiting automatically.
 
 <SLabel>Core answer</SLabel>
 
