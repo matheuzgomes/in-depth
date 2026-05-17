@@ -58,11 +58,11 @@ That is exactly why free-threaded CPython is a major interpreter project rather 
 
 <SLabel>CPython internals</SLabel>
 
-The GIL is implemented in `Python/ceval.c` (the main evaluation loop) and `Python/pystate.c` (the thread state management). In the standard CPython build (`Py_GIL_DISABLED` not defined), the evaluation loop acquires the GIL before executing bytecode and releases it during blocking operations.
+In CPython 3.12+, the GIL implementation lives across the evaluation loop, thread-state code, and `Python/ceval_gil.c`. In the standard CPython build (`Py_GIL_DISABLED` not defined), a thread must hold the GIL while executing Python bytecode, and the runtime releases it around blocking operations.
 
-**Acquisition model.** CPython uses a periodic-check approach. The GIL is not released after every bytecode instruction. Instead, the evaluation loop checks a `_Py_atomic_load` of the `gil_drop_request` flag at configurable intervals. The default check interval is determined by `sys.setswitchinterval()` (default: 5 milliseconds on CPython 3.12). When a waiting thread sets this flag, the running thread releases the GIL after completing its current "tick" of bytecode execution.
+**Acquisition model.** CPython uses a periodic-check approach. The GIL is not released after every bytecode instruction. Instead, the eval loop and GIL scheduler cooperate through internal eval-breaker state. The public tuning knob is `sys.setswitchinterval()`, which sets the ideal duration of a thread's timeslice (default: 5 milliseconds on CPython 3.12). The exact handoff timing is an implementation detail and can also be affected by blocking calls and operating-system scheduling.
 
-**Release points.** The GIL is explicitly released in these situations (`Python/ceval.c` and `Python/thread.c`):
+**Release points.** The GIL is explicitly released in these situations (for example in CPython's eval, GIL, and thread support code):
 
 - before any blocking I/O call (file read/write, socket operations, `time.sleep()`)
 - during computationally intensive native code in some extension modules (e.g., hashing, compression, regex matching)
@@ -84,7 +84,7 @@ print(sys.getswitchinterval())
 
 The switch interval is a runtime tuning knob for how often Python threads are given a chance to switch. Actual scheduling depends on the operating system and on whether the current thread reaches a point where switching can happen — it is a best-effort interval, not a deterministic guarantee.
 
-**Per-interpreter GIL ([PEP 684](https://peps.python.org/pep-0684/), Python 3.12+).** Starting in Python 3.12, CPython supports `Py_NewInterpreter()` creating sub-interpreters that each have their own GIL. This is implemented in `Python/pystate.c` — the GIL is stored per-interpreter in the `PyInterpreterState` struct, so threads running in different interpreters do not contend for the same lock. `InterpreterPoolExecutor` (Python 3.14) provides a high-level API for this.
+**Per-interpreter GIL ([PEP 684](https://peps.python.org/pep-0684/), Python 3.12+).** `Py_NewInterpreter()` has existed since Python 1.5, but before 3.12 all sub-interpreters shared the same GIL. Starting in Python 3.12, each sub-interpreter created by `Py_NewInterpreter()` gets its own GIL. This is implemented in `Python/pystate.c` — the GIL is stored per-interpreter in the `PyInterpreterState` struct, so threads running in different interpreters do not contend for the same lock. `InterpreterPoolExecutor` (Python 3.14) provides a high-level API for this.
 
 <Callout type="info">
   Distinguish "concurrency" (dealing with many things at once) from "parallelism" (doing many things at once). The GIL makes this distinction concrete: threads provide concurrency for I/O-bound work but not parallelism for CPU-bound Python bytecode. Use processes for CPU-bound parallelism in the regular CPython build.
@@ -283,6 +283,7 @@ When performance matters:
 - [PEP 684: A Per-Interpreter GIL](https://peps.python.org/pep-0684/)
 - [PEP 703: Making the Global Interpreter Lock Optional in CPython](https://peps.python.org/pep-0703/)
 - [CPython source: Python/ceval.c](https://github.com/python/cpython/blob/main/Python/ceval.c)
+- [CPython source: Python/ceval_gil.c](https://github.com/python/cpython/blob/main/Python/ceval_gil.c)
 - [CPython source: Python/pystate.c](https://github.com/python/cpython/blob/main/Python/pystate.c)
 - [Python glossary: GIL](https://docs.python.org/3/glossary.html#term-global-interpreter-lock)
 - [concurrent.futures docs](https://docs.python.org/3/library/concurrent.futures.html)

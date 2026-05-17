@@ -58,7 +58,7 @@ CPython uses two complementary memory management mechanisms, both implemented in
 
 The collection thresholds are tunable via `gc.get_threshold()` and default to `(700, 10, 10)` on CPython 3.12. That means: collect gen 0 every 700 allocations minus deallocations; collect gen 1 every 10 gen 0 collections; collect gen 2 every 10 gen 1 collections.
 
-The GC algorithm tracks container objects (those that can participate in cycles: dict, list, set, tuple, custom class instances, etc.). Non-container objects such as strings, integers, and small tuples are never tracked by the GC because they cannot own references to other objects that would form cycles.
+The GC algorithm tracks container objects (those that can participate in cycles: dict, list, set, tuple, custom class instances, etc.). Non-container objects such as strings, integers, and tuples containing no container objects are never tracked by the GC because they cannot own references to other objects that would form cycles.
 
 During collection, the GC performs a reference-count subtraction phase to identify truly unreachable objects in a cycle, then calls the finalizer (if any) and reclaims the memory. Objects with `__del__` methods still complicate cleanup because finalizers can observe partially torn-down object graphs, run at inconvenient times, or resurrect objects. Modern Python can collect many cycles with finalizers; `gc.garbage` is mostly for debug retention or extension types with legacy finalization hooks.
 

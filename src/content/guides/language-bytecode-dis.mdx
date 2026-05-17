@@ -100,12 +100,12 @@ See also <CardRef id="language-decorators-closures" /> for the scope side of the
 
 <SLabel>CPython internals</SLabel>
 
-**The evaluation loop** (`Python/ceval.c`). CPython's bytecode interpreter is a massive switch statement inside `_PyEval_EvalFrameDefault`. Each opcode is a `case` label. The loop:
+**The evaluation loop** (`Python/ceval.c`). CPython's bytecode interpreter runs a generated dispatch loop inside `_PyEval_EvalFrameDefault`. The exact dispatch machinery is a CPython implementation detail, but conceptually the loop:
 
-1. reads the next instruction from `f->f_lasti` (the instruction pointer in the current frame)
+1. reads the next instruction from the internal instruction pointer (`next_instr` in `_PyInterpreterFrame`)
 2. decodes the opcode and its argument
-3. dispatches to the matching `case`
-4. advances `f_lasti` and repeats
+3. dispatches to the matching instruction handler
+4. advances the instruction pointer and repeats
 
 **Inline caching and adaptive specialization (CPython 3.11+, [PEP 659](https://peps.python.org/pep-0659/)).** Starting in Python 3.11, CPython added a specializing adaptive interpreter. Opcodes like `LOAD_ATTR`, `LOAD_GLOBAL`, `BINARY_OP`, and `CALL` are "adaptive" — on their first execution, they behave as generic versions. After enough executions (warm-up), CPython replaces them with specialized versions (e.g., `LOAD_ATTR` becomes `LOAD_ATTR_SLOT` for slot-based attribute access). This is why CPython 3.11+ code can show different bytecode on the first run vs. after warm-up.
 
@@ -125,13 +125,16 @@ The cache entries show up as inline metadata between opcodes. They are not real 
 
 **Opcode encoding.** In CPython 3.12, each instruction is 2 bytes: 1 byte for the opcode, 1 byte for the argument (or a 2-byte extended argument if `EXTENDED_ARG` precedes it). The opcode range is 0–255, with `HAVE_ARGUMENT` (90) as the boundary between opcodes that take no argument and those that do.
 
-**The frame execution model.** Each function call creates a frame (`PyFrameObject` in `Objects/frameobject.c`). The frame holds:
+**The frame execution model.** In CPython 3.11+, the interpreter executes calls with an internal `_PyInterpreterFrame`. That internal frame stores the code object's local slots, closure cells, and evaluation stack in a compact "locals plus" layout. A Python-level frame object (`PyFrameObject`, exposed as `types.FrameType`) is the public view used by debuggers, trace hooks, and introspection APIs.
 
-- `f_locals` — the fast-locals array (not a dict, just a C array of `PyObject*`)
+The public frame object exposes attributes and C API accessors such as:
+
+- `f_locals` — a mapping view of local variable bindings
 - `f_globals` — a reference to the module's global dict
 - `f_builtins` — a reference to the builtins dict
-- `f_lasti` — the instruction pointer (offset into the bytecode)
-- `f_valuestack` — the evaluation stack, a contiguous array of `PyObject*`
+- `f_lasti` — the last-executed instruction offset (used for tracing, exception handling, and resume)
+
+The internal `_PyInterpreterFrame` and its stack layout are CPython implementation details, not stable public API.
 
 This is why local variable access is fast: `LOAD_FAST` is a direct C array access by index, while `LOAD_GLOBAL` requires a dict lookup and `LOAD_DEREF` requires following a chain of closure cell objects.
 

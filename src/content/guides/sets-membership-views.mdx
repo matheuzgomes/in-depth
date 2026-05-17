@@ -57,28 +57,28 @@ for n in (0, 1, 4, 5, 16, 32):
 
 That overhead is the price of near-constant-time membership.
 
-The set base object (`216` bytes for an empty set on CPython 3.12) is much larger than a dict (`64` bytes) because the set object includes inline hash table arrays even at minimum size. Sets make this tradeoff deliberately: they optimize for the membership workload over compact empty-state storage.
+The set base object (~216 bytes for an empty set on CPython 3.12) is much larger than an empty dict (~72 bytes) because the set object includes inline hash table storage (8 entry slots) even at minimum size.
 
 <SLabel>CPython internals</SLabel>
 
-CPython implements sets using the same underlying hash table machinery as dicts. The set type (`PySetObject`) is defined in `Objects/setobject.c`. Unlike dicts, sets store only keys — there are no associated values. The hash table uses the same probing algorithm and the same load-factor policy.
+CPython implements sets using the same underlying hash table machinery as dicts. The set type (`PySetObject`) is defined in `Objects/setobject.c`. Unlike dicts, sets store only keys — there are no associated values. The hash table uses the same probing algorithm but a different resize policy (~60% fill trigger instead of dict's 2/3).
 
 The set object contains:
 
-- a pointer to the hash table entries (an array of `PyObject*` for keys)
-- a separate hash array (`Py_hash_t*`) stored alongside the entries for fast rehashing and resize operations
+- a pointer to the hash table entries (an array of `_Py_setentry` structs, each holding a key pointer and cached hash)
 - `used` and `fill` counters that track how many slots are occupied (used) versus ever occupied (fill, which includes dummy entries from deleted elements)
 
-The probing formula for sets uses the same perturb algorithm as dicts (`Objects/setobject.c`):
+The probing formula for sets uses a hybrid of linear probing and the same perturb algorithm as dicts (`Objects/setobject.c`):
 
 ```
+# 9 steps of linear probing first, then fall back to perturb
 j = (5 * j) + 1 + perturb
 perturb >>= PERTURB_SHIFT
 ```
 
-The minimum set size on CPython 3.12 is `PySet_MINSIZE = 8` slots, and the load factor uses `USABLE_FRACTION = 2/3`, just like dicts.
+The minimum set size on CPython 3.12 is `PySet_MINSIZE = 8` slots, with a load factor that triggers resize at ~60% fill. The trigger is based on `fill` (active entries plus dummy slots left by deletions), not just `used` active entries.
 
-A key difference from dict: sets track a separate `hash` array in addition to the entries. This means set resizing involves rehashing every element, not just re-indexing, because the set may need to reorganize entries based on hash values. This is one reason why set resizing tends to be more expensive than dict resizing for the same number of elements — the set must compute and store hash arrays, while dicts can use the hash from the key object itself.
+A key difference from dict: sets use a combined entry struct (`_Py_setentry`) that stores key and hash together, rather than the split-table layout dicts use (sparse indices + dense entries). Set resizing allocates one new combined table, copies active entries, and frees the old table — no rehashing needed because the hash is cached in each entry.
 
 When you call `set()` on an iterable, CPython calls `set_update_iterable` in `Objects/setobject.c` (Python 3.12), which iterates the source and inserts each element one at a time. The `frozenset` constructor does the same but returns an immutable wrapper around the same hash table, with no add/discard methods.
 

@@ -66,7 +66,7 @@ for n in (0, 1, 2, 3, 10, 16):
 
 - the list container
 - 10 pointer slots inside or behind the container
-- 10 separate `float` objects, each with its own object header and payload
+- 10 references to the same `float` object (the literal `1.0` is a single constant in the code object)
 
 ```python
 # [CURRENT - 3.10-3.14] Works on Python 3.x
@@ -74,8 +74,11 @@ for n in (0, 1, 2, 3, 10, 16):
 import sys
 
 n = 10
-list_total = sys.getsizeof([1.0] * n) + n * sys.getsizeof(1.0)
-tuple_total = sys.getsizeof((1.0,) * n) + n * sys.getsizeof(1.0)
+values = [float(i) for i in range(n)]
+list_total = sys.getsizeof(values) + sum(sys.getsizeof(v) for v in values)
+
+values_t = tuple(float(i) for i in range(n))
+tuple_total = sys.getsizeof(values_t) + sum(sys.getsizeof(v) for v in values_t)
 
 print(list_total)   # 376 on CPython 3.12.3, 64-bit
 print(tuple_total)  # 360 on CPython 3.12.3, 64-bit

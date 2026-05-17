@@ -65,8 +65,8 @@
           ],
           "notes": [
             "**What this tests** \u2014 both code paths copy the same span from a 1M-element source list. One uses native `list[start:stop]`, the other builds a new list via `list(islice(...))`. The question is which is faster and whether they allocate differently.",
-            "**Why native slicing won** \u2014 `list[start:stop]` is implemented entirely in C inside `listobject.c`. It memcpy's the exact pointer range in one shot. `list(islice(...))` iterates through a Python-level generator, yields each element, and appends one at a time \u2014 more C calls, more intermediate boxing.",
-            "**The surprise** \u2014 the result list is identical in memory both ways. `list[start:stop]` wins on CPU time, not allocation. The speed gap grows with span size because `islice` overhead scales linearly with the number of elements yielded.",
+            "**Why native slicing won** \u2014 `list[start:stop]` is implemented entirely in C inside `listobject.c`. It preallocates the result list, copies references in a tight C loop, and increments each element's reference count. `itertools.islice` is also a C iterator, but `list(islice(...))` still has to advance an iterator and append one element at a time.",
+            "**The surprise** \u2014 the result list is identical in memory both ways. `list[start:stop]` wins on CPU time, not allocation. The speed gap grows with span size because per-element iterator and append overhead scales linearly with the number of elements yielded.",
             "**Takeaway** \u2014 use native slicing for materialized copies. Use `islice` only when you need lazy iteration over a range without allocating result storage."
           ],
           "winner": {
@@ -149,9 +149,8 @@
           ],
           "notes": [
             "**What this tests** \u2014 key lookup in a dict (hash table) vs linear scan through a list of (key, value) pairs. Both data structures hold the same 1M entries. The chart shows how lookup time scales as the collection grows.",
-            "**Why dict won** \u2014 dict uses an open-addressed hash table. Computing the hash and probing a few slots is O(1) average case regardless of dict size. The list scan must call `__eq__` on every element until it finds a match, making it O(n).",
-            "**The surprise** \u2014 the speed gap exceeds {speed_gap_note}x at 1M. Most developers know \u201chash tables are faster,\u201d but the magnitude is far larger than intuition suggests. For repeated lookups, the dict pays for its memory overhead within a handful of accesses.",
-            "**Takeaway** \u2014 if the dominant operation is keyed lookup, dict wins by an enormous margin that grows with size. Do not reach for a list of pairs unless you need to iterate more often than you need to look up."
+            "**Why dict won** \u2014 dict uses an open-addressed hash table. Computing the hash and probing a few slots is O(1) average case regardless of dict size. The list scan must call `__eq__` sequentially until it finds a match, making it O(n).",
+            "**The surprise** \u2014 the speed gap exceeds 160,676x at 1M. Most developers know \u201chash tables are faster,\u201d but the magnitude is far larger than intuition suggests. For repeated lookups, the dict pays for its memory overhead within a handful of accesses."
           ],
           "winner": {
             "label": "dict lookup",
@@ -208,9 +207,8 @@
           ],
           "notes": [
             "**What this tests** \u2014 key lookup in a dict (hash table) vs linear scan through a list of (key, value) pairs. Both data structures hold the same 1M entries. The chart shows how lookup time scales as the collection grows.",
-            "**Why dict won** \u2014 dict uses an open-addressed hash table. Computing the hash and probing a few slots is O(1) average case regardless of dict size. The list scan must call `__eq__` on every element until it finds a match, making it O(n).",
-            "**The surprise** \u2014 the speed gap exceeds {speed_gap_note}x at 1M. Most developers know \u201chash tables are faster,\u201d but the magnitude is far larger than intuition suggests. For repeated lookups, the dict pays for its memory overhead within a handful of accesses.",
-            "**Takeaway** \u2014 if the dominant operation is keyed lookup, dict wins by an enormous margin that grows with size. Do not reach for a list of pairs unless you need to iterate more often than you need to look up."
+            "**Why dict won** \u2014 dict uses an open-addressed hash table. Computing the hash and probing a few slots is O(1) average case regardless of dict size. The list scan must call `__eq__` sequentially until it finds a match, making it O(n).",
+            "**The surprise** \u2014 the speed gap exceeds 251,560x at 1M. Most developers know \u201chash tables are faster,\u201d but the magnitude is far larger than intuition suggests. For repeated lookups, the dict pays for its memory overhead within a handful of accesses."
           ],
           "winner": {
             "label": "dict lookup",
@@ -222,7 +220,7 @@
     },
     "dict-key-type": {
       "title": "Measured dict lookup by key type",
-      "summary": "This notebook compares dict lookup speed when keys are integers versus strings. Both are hash-table lookups, but string keys require string-equality checks that can be more expensive than integer equality.",
+      "summary": "This notebook compares dict lookup speed when keys are integers versus strings. Both are hash-table lookups, but CPython uses different hashing and equality paths for the two key types.",
       "controls": [
         {
           "id": "lookup",
@@ -275,11 +273,11 @@
           "metrics": [
             {
               "label": "Faster key type",
-              "value": "int keys (0.9x faster @ 1M)"
+              "value": "str keys (1.1x faster @ 1M)"
             },
             {
               "label": "Speed gap @ 1M",
-              "value": "0.9x"
+              "value": "1.1x"
             },
             {
               "label": "Largest mapping tested",
@@ -288,13 +286,13 @@
           ],
           "notes": [
             "**What this tests** \u2014 dict lookup with integer keys vs string keys on 1M-entry dicts. Both keys are hashable and go through the same hash-table algorithm, but the equality check after the hash match differs.",
-            "**Why int keys won** \u2014 integer equality is a single C integer comparison (`Py_EQ` compares the raw `PyLong` value). String equality requires a full character-by-character comparison via `PyUnicode_Compare`, which can be expensive for long or uninterned strings.",
-            "**The surprise** \u2014 the gap is only 0.9x. Despite string comparisons being more expensive, the hash table's probe sequence rarely needs multiple equality checks per lookup. The hash collision rate is low, so the extra string cost is diluted.",
-            "**Takeaway** \u2014 int keys are marginally faster, but the difference is small for real workloads. Choose key types based on domain semantics (user IDs as ints, names as strings) rather than micro-optimizing lookup speed."
+            "**Why str keys won here** \u2014 CPython has very fast C paths for both key types. Integer hashes and equality are cheap, while Unicode-key dictionaries can use specialized string lookup paths and cached string hashes after the first lookup. This benchmark uses `str(i)` keys, not interned string literals, so the result should not be explained by automatic interning or PEP 659 bytecode specialization.",
+            "**The surprise** \u2014 the gap is only 1.1x. The hash table's probe sequence rarely needs multiple equality checks per lookup, so both paths are dominated by hash-table probing and cache behavior rather than the raw equality operation alone.",
+            "**Takeaway** \u2014 this is a small CPython-specific microbenchmark result, not a design rule. Choose key types based on domain semantics (user IDs as ints, names as strings) rather than micro-optimizing lookup speed."
           ],
           "winner": {
-            "label": "int keys",
-            "detail": "0.9x faster than string keys @ 1M"
+            "label": "str keys",
+            "detail": "1.1x faster than int keys @ 1M"
           },
           "guideRef": "dict-hash-tables"
         },
@@ -330,11 +328,11 @@
           "metrics": [
             {
               "label": "Faster key type",
-              "value": "int keys (0.8x faster @ 1M)"
+              "value": "str keys (1.2x faster @ 1M)"
             },
             {
               "label": "Speed gap @ 1M",
-              "value": "0.8x"
+              "value": "1.2x"
             },
             {
               "label": "Largest mapping tested",
@@ -343,13 +341,13 @@
           ],
           "notes": [
             "**What this tests** \u2014 dict lookup with integer keys vs string keys on 1M-entry dicts. Both keys are hashable and go through the same hash-table algorithm, but the equality check after the hash match differs.",
-            "**Why int keys won** \u2014 integer equality is a single C integer comparison (`Py_EQ` compares the raw `PyLong` value). String equality requires a full character-by-character comparison via `PyUnicode_Compare`, which can be expensive for long or uninterned strings.",
-            "**The surprise** \u2014 the gap is only 0.8x. Despite string comparisons being more expensive, the hash table's probe sequence rarely needs multiple equality checks per lookup. The hash collision rate is low, so the extra string cost is diluted.",
-            "**Takeaway** \u2014 int keys are marginally faster, but the difference is small for real workloads. Choose key types based on domain semantics (user IDs as ints, names as strings) rather than micro-optimizing lookup speed."
+            "**Why str keys won here** \u2014 CPython has very fast C paths for both key types. Integer hashes and equality are cheap, while Unicode-key dictionaries can use specialized string lookup paths and cached string hashes after the first lookup. This benchmark uses `str(i)` keys, not interned string literals, so the result should not be explained by automatic interning or PEP 659 bytecode specialization.",
+            "**The surprise** \u2014 the gap is only 1.2x. The hash table's probe sequence rarely needs multiple equality checks per lookup, so both paths are dominated by hash-table probing and cache behavior rather than the raw equality operation alone.",
+            "**Takeaway** \u2014 this is a small CPython-specific microbenchmark result, not a design rule. Choose key types based on domain semantics (user IDs as ints, names as strings) rather than micro-optimizing lookup speed."
           ],
           "winner": {
-            "label": "int keys",
-            "detail": "0.8x faster than string keys @ 1M"
+            "label": "str keys",
+            "detail": "1.2x faster than int keys @ 1M"
           },
           "guideRef": "dict-hash-tables"
         }
@@ -428,7 +426,7 @@
           "notes": [
             "**What this tests** \u2014 `value in set` vs `value in list` on the same 1M elements. The set pays a memory premium for hash-table sparsity; the list pays a time penalty for linear scanning. The question is which tradeoff wins for membership workloads.",
             "**Why set won** \u2014 set is implemented as an open-addressed hash table (same core algorithm as dict). Membership means hashing the key and probing a few slots \u2014 O(1) average. The list must compare `__eq__` sequentially \u2014 O(n).",
-            "**The surprise** \u2014 the gap exceeds {ratio:.0f}x at 1M. The set's memory overhead (~{kib(final_metrics['set_size']):.0f} KiB vs {kib(final_metrics['list_size']):.0f} KiB for the list) is recouped after a tiny number of lookups.",
+            "**The surprise** \u2014 the gap exceeds 64,724x at 1M. The set's memory overhead (~32,768 KiB vs ~7,813 KiB for the list) is recouped after a tiny number of lookups.",
             "**Takeaway** \u2014 if the dominant question is 'is this value present?', start with set. The memory overhead of the hash table is dwarfed by the time savings for repeated membership checks."
           ],
           "winner": {
@@ -487,7 +485,7 @@
           "notes": [
             "**What this tests** \u2014 `value in set` vs `value in list` on the same 1M elements. The set pays a memory premium for hash-table sparsity; the list pays a time penalty for linear scanning. The question is which tradeoff wins for membership workloads.",
             "**Why set won** \u2014 set is implemented as an open-addressed hash table (same core algorithm as dict). Membership means hashing the key and probing a few slots \u2014 O(1) average. The list must compare `__eq__` sequentially \u2014 O(n).",
-            "**The surprise** \u2014 the gap exceeds {ratio:.0f}x at 1M. The set's memory overhead (~{kib(final_metrics['set_size']):.0f} KiB vs {kib(final_metrics['list_size']):.0f} KiB for the list) is recouped after a tiny number of lookups.",
+            "**The surprise** \u2014 the gap exceeds 152,129x at 1M. The set's memory overhead (~32,768 KiB vs ~7,813 KiB for the list) is recouped after a tiny number of lookups.",
             "**Takeaway** \u2014 if the dominant question is 'is this value present?', start with set. The memory overhead of the hash table is dwarfed by the time savings for repeated membership checks."
           ],
           "winner": {
@@ -540,7 +538,7 @@
             },
             {
               "label": "Largest set size",
-              "value": "1000000 elements each"
+              "value": "500000 elements each"
             },
             {
               "label": "Combined memory @ 1M",
@@ -549,9 +547,9 @@
           ],
           "notes": [
             "**What this tests** \u2014 set intersection (`a & b`) vs union (`a | b`) on two disjoint sets of equal size. Both are hash-table operations, but they iterate differently.",
-            "**Why intersection won** \u2014 intersection iterates the smaller set and probes each element in the larger set. It can short-circuit: if an element is not in the other set, it is skipped. Union must iterate and insert every element from both sets into a new set, which always requires two full iterations.",
-            "**The surprise** \u2014 intersection is still faster even on disjoint sets (no early filtering). The gap (12.5x) comes from union doing twice as many insertions: every element from both sets must be hashed and placed into the result table.",
-            "**Takeaway** \u2014 for set algebra, intersection is the cheapest operation because it can short-circuit. Union always requires a full pass over both inputs. Memory for two sets of 500k elements each is ~{set_memory[-1]:.0f} KiB combined."
+            "**Why intersection won** \u2014 intersection iterates one input and probes the other. For a disjoint pair, every probe misses and nothing is inserted into the result. Union must build a new result containing every element from both inputs.",
+            "**The surprise** \u2014 intersection is still faster even when the sets are disjoint. The gap (12.5x) comes from avoiding result insertions: union must hash and place every element from both sets into the result table.",
+            "**Takeaway** \u2014 intersection is often cheaper than union when the result is small, because it can skip non-members instead of inserting them. Union always has to materialize all elements from both inputs. Memory for two sets of 500k elements each is ~32,768 KiB combined."
           ],
           "winner": {
             "label": "intersection (a & b)",
@@ -655,7 +653,7 @@
           ],
           "notes": [
             "**What this tests** \u2014 `sys.getsizeof` of the container shell (not the elements inside) for list, tuple, set, and array.array. Smaller means less overhead before you add data.",
-            "**Why array won** \u2014 array is a flat sequence that stores raw C values inline with no per-element PyObject headers.  must store PyObject pointers, and set additionally reserves spare hash-table buckets.",
+            "**Why array won** \u2014 array is a flat sequence that stores raw C values inline with no per-element PyObject headers. List and tuple must store PyObject pointers, and set additionally reserves spare hash-table buckets.",
             "**The surprise** \u2014 set is 8.4x larger than array at the shell level, but the real gap widens dramatically once you factor in the per-element PyObject overhead that array avoids entirely for numeric data.",
             "**Takeaway** \u2014 for dense homogeneous numeric data, array.array is the most memory-efficient container. Set is the most expensive because it optimizes for membership speed, not compactness."
           ],
@@ -863,7 +861,7 @@
             },
             {
               "label": "Memory advantage",
-              "value": "generator (no intermediate list, ~0 KiB vs ~{list_memory[-1]:.0f} KiB)"
+              "value": "generator (no intermediate list, ~0 KiB vs ~8251 KiB)"
             },
             {
               "label": "List mem @ 1M",
@@ -1163,7 +1161,7 @@
           ],
           "notes": [
             "**What this tests** \u2014 draining a container from the left edge one element at a time. `list.pop(0)` vs `deque.popleft()` across 1k to 100k elements. Both containers start with the same data.",
-            "**Why deque won** \u2014 `list.pop(0)` is O(n): CPython calls `memmove` to shift every remaining reference one slot left in the underlying C array. Every pop touches all remaining elements. `deque.popleft()` is O(1): deque is a doubly-linked block structure where left-pop just advances the head pointer.",
+            "**Why deque won** \u2014 `list.pop(0)` is O(n): CPython calls `memmove` to shift every remaining reference one slot left in the underlying C array. Every pop touches all remaining elements. `deque.popleft()` is O(1): deque is a doubly-linked block structure where left-pop advances an index within a block; when a block empties it is freed and the head moves to the next block.",
             "**The surprise** \u2014 the gap reaches 200.6x at 100k. Even worse: `list.pop(0)` is not just slow \u2014 it gets quadratically slower as the list grows because each pop does more work. `deque.popleft()` stays flat. Memory cost is comparable (list 781.3 KiB vs deque 806.1 KiB @ 100k).",
             "**Takeaway** \u2014 never use `list.pop(0)` on large lists. This is the most common performance trap in FIFO-queue code. Use `collections.deque` for any left-edge mutation pattern. The API is nearly identical; the performance difference is algorithmic."
           ],

@@ -1,6 +1,6 @@
 import { dictLookupSimulation } from "@/data/simulations"
 
-Dictionaries are Python's general-purpose hash table. They trade memory for fast keyed access, and they also underpin object namespaces, module globals, and many instance attribute dictionaries. Every time you access `obj.attr` or call a function, a dict is involved somewhere.
+Dictionaries are Python's general-purpose hash table. They trade memory for fast keyed access, and they also underpin module globals, class namespaces, many instance attribute dictionaries, and many attribute lookup paths. Not every `obj.attr` access or function call performs a dict lookup on the hot path — descriptors, `__slots__`, locals, and CPython's inline caches can avoid that — but dicts are still one of the core structures behind Python's namespace model.
 
 Think of a dict like a library card catalog. You look up a title (hash the key), find the exact shelf location, and walk straight to it. No scanning every book. The cost is the catalog itself — the hash table reserves extra space to keep lookups fast, which is why a dict with 10,000 entries uses more memory than a list with 10,000 entries.
 

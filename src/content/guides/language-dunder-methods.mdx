@@ -55,7 +55,7 @@ That is why implementing a dunder method is never cosmetic. You are defining par
 
 <SLabel>CPython internals</SLabel>
 
-**Special method lookup** bypasses the normal instance-attribute lookup (`__getattribute__`) in most cases. Instead, CPython looks up the method **on the type**, not the instance (`Objects/typeobject.c`, `_Py_lookup_special`). This is documented in the [Python data model](https://docs.python.org/3/reference/datamodel.html) (Ch. 3): "The implementation works through a prototype chain, looking for the method in the type hierarchy."
+**Special method lookup** bypasses the normal instance-attribute lookup (`__getattribute__`) in most cases. Instead, CPython looks up the method **on the type**, not the instance (`Objects/typeobject.c`, `_Py_lookup_special`). This is documented in the [Python data model](https://docs.python.org/3/reference/datamodel.html): special methods are looked up on the type, using the type's MRO (method resolution order) — not the object's `__dict__`.
 
 For example, when Python sees `len(obj)`, the `len()` built-in calls `type(obj).__len__(obj)`. It does NOT call `obj.__len__()`. This distinction matters because it means special methods defined on the instance rather than the class are invisible to the interpreter's dispatch logic.
 

@@ -271,7 +271,7 @@ const TOPIC_DETAILS: Record<string, TopicBoardDetails> = {
       "The power is in the boundary: accept broad protocols (`Iterable`, `Mapping`), return narrow concrete types (`list[str]`). That gives callers maximum flexibility on the input side and maximum guarantees on the output side.",
     ],
     howItWorks: [
-      "Annotations are exposed through `__annotations__`, but their runtime form is version-dependent. In Python 3.10-3.13 they may be real objects or strings under `from __future__ import annotations`; in Python 3.14+ they are evaluated lazily.",
+      "Annotations are exposed through `__annotations__`, but their runtime form is version-dependent. In Python 3.7-3.13 they may be real objects or strings under `from __future__ import annotations`; in Python 3.14+ they are evaluated lazily.",
       "Static type checkers (mypy, pyright) interpret annotations before runtime to reason about compatibility and misuse. At runtime, they are ignored unless you build explicit validation on top.",
       "Generic types from `collections.abc` (`Iterable`, `Mapping`) describe capabilities. Concrete types (`list`, `dict`) describe implementations. The difference is the level of constraint.",
     ],
@@ -434,7 +434,7 @@ const TOPIC_DETAILS: Record<string, TopicBoardDetails> = {
     ],
     howItWorks: [
       "Set membership uses the same hash-table mechanics as dict keys: hash the element, probe the table, O(1) average. Duplicates collapse to one element because equality and hashing define identity within the set.",
-      "`dict_keys` implements the `collections.abc.Set` interface, supporting `&`, `|`, `-`, `^` without materializing a new set object. The view is a live window into the dict, so changes to the dict are reflected immediately.",
+      "`dict_keys` supports set operations directly via `&`, `|`, `-`, `^` without materializing the keys view into a standalone set first.",
       "`dict_items` is set-like only when every value is also hashable. Lists and other unhashable values make item-view set operations invalid.",
     ],
     whenToUseIt: [
@@ -571,7 +571,7 @@ const TOPIC_DETAILS: Record<string, TopicBoardDetails> = {
     howItWorks: [
       "`typing.NamedTuple` creates a tuple subclass with named field accessors. Field values are stored as tuple elements, accessible by index or by name. Memory footprint is that of a tuple: exact allocation, no per-field PyObject headers beyond the tuple's array of pointers.",
       "`@dataclass` uses class annotations to generate methods such as `__init__`, `__repr__`, and `__eq__` by default. Hash generation is conditional: mutable dataclasses with generated equality are deliberately unhashable unless you opt into a safe policy. Fields are stored as instance attributes (in `__dict__` or `__slots__`).",
-      "With `slots=True`, a dataclass stores fields in a compact array instead of `__dict__`, reducing memory by ~30% and speeding attribute access.",
+      "With `slots=True`, a dataclass stores fields in a compact array instead of `__dict__`, reducing memory and speeding attribute access.",
     ],
     whenToUseIt: [
       "Use NamedTuple when you want an immutable record that also behaves as a tuple: indexing, unpacking, and pattern matching included.",

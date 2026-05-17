@@ -324,7 +324,7 @@ match command:
     },
     {
       label: "Try the first case",
-      explanation: "Pattern matching starts at the first case. Python checks whether the subject is a two-item sequence that starts with the literal 'move' and has a third element to bind.",
+      explanation: "Pattern matching starts at the first case. Python checks whether the subject is a three-item sequence that starts with the literal 'move' and has a third element to bind.",
       activeLine: 4,
       subject: ["rotate", "90"],
       bindings: [],

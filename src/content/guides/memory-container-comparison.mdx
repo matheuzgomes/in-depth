@@ -130,7 +130,7 @@ Each container type has a distinct C-level representation in CPython 3.12:
 **`set`** (`Objects/setobject.c`). The `PySetObject` contains:
 - a hash table with `fill` (occupied + dummy) and `used` (active) counters
 - minimum size of `PySet_MINSIZE = 8` slots
-- the same `USABLE_FRACTION = 2/3` resize policy as dict
+- a fill-based resize trigger at ~60%, based on occupied-plus-dummy slots rather than only active entries, different from dict's USABLE_FRACTION
 
 **`array.array`** (`Modules/arraymodule.c`). The array object stores:
 - a contiguous C array of values determined by the typecode
@@ -140,7 +140,7 @@ Each container type has a distinct C-level representation in CPython 3.12:
 The key insight from the CPython C source is the difference in allocation patterns:
 - `tuple` does one allocation for the whole object; a 1000-element tuple is one contiguous block
 - `list` does two allocations (object + reference array); growth triggers reallocation of the reference array, copying all existing pointers
-- `set` does three allocations per resize (object + indices + entries hash tables); resize is the most expensive per-element operation
+- `set` allocates one combined hash table on resize; resize copies active entries into the new table, which is expensive but involves one allocation per resize
 - `array.array` does one or two allocations; growth reallocates the raw C buffer, copying the raw bytes
 
 <Callout type="info">

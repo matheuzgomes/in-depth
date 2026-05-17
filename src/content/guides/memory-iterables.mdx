@@ -74,7 +74,7 @@ When `next(gen)` is called, CPython's evaluation loop (`Python/ceval.c`) resumes
 
 This is fundamentally different from a container or a flat sequence. A list of `n` items allocates all `n` references immediately. A generator that yields `n` items allocates only the generator object and its frame (typically a few hundred bytes on CPython 3.12), regardless of how many items it will produce.
 
-The `gi_frame.yieldfrom` field (or `cr_frame.yieldfrom` for coroutines) tracks the sub-iterator when `yield from` is used, creating a chain of suspended frames.
+The `gi_yieldfrom` field on the generator object tracks the sub-iterator when `yield from` is used, creating a chain of suspended frames.
 
 <Callout type="info">
   Generator-based coroutines and native coroutines both rely on the same suspension model. The frame is the "suspension unit" — the language creates one frame per active generator, and the frame's liveness determines the memory footprint. The <code>yield from</code> construct (and <code>await</code> in native coroutines) chains these frames together without additional allocation.

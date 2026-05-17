@@ -91,7 +91,7 @@ async def fetch_all(urls, client, limit=20):
     return await asyncio.gather(*(one(url) for url in urls))
 ```
 
-Blocking file I/O, compression, JSON parsing of huge payloads, and synchronous clients still block the event loop if called directly. `asyncio.to_thread()` can move blocking call sites to a worker thread, but that is mainly for blocking I/O or C extensions that release the GIL. Pure Python CPU work still contends on the GIL.
+Blocking file I/O, compression, JSON parsing of huge payloads, and synchronous clients still block the event loop if called directly. `asyncio.to_thread()` can move blocking call sites to a worker thread. For blocking I/O and C extensions that release the GIL, this provides near-full parallelism. For pure Python CPU work, the thread still contends for the GIL, but the event loop regains control during periodic GIL releases (every ~5ms), preventing complete event-loop starvation.
 
 ```python
 # [OLDER / 3.9, CURRENT - 3.10-3.14] Works on Python 3.9+

@@ -114,8 +114,8 @@ def build_slicing_topic() -> dict:
                 ],
                 "notes": [
                     "**What this tests** — both code paths copy the same span from a 1M-element source list. One uses native `list[start:stop]`, the other builds a new list via `list(islice(...))`. The question is which is faster and whether they allocate differently.",
-                    "**Why native slicing won** — `list[start:stop]` is implemented entirely in C inside `listobject.c`. It memcpy's the exact pointer range in one shot. `list(islice(...))` iterates through a Python-level generator, yields each element, and appends one at a time — more C calls, more intermediate boxing.",
-                    "**The surprise** — the result list is identical in memory both ways. `list[start:stop]` wins on CPU time, not allocation. The speed gap grows with span size because `islice` overhead scales linearly with the number of elements yielded.",
+                    "**Why native slicing won** — `list[start:stop]` is implemented entirely in C inside `listobject.c`. It preallocates the result list, copies references in a tight C loop, and increments each element's reference count. `itertools.islice` is also a C iterator, but `list(islice(...))` still has to advance an iterator and append one element at a time.",
+                    "**The surprise** — the result list is identical in memory both ways. `list[start:stop]` wins on CPU time, not allocation. The speed gap grows with span size because per-element iterator and append overhead scales linearly with the number of elements yielded.",
                     "**Takeaway** — use native slicing for materialized copies. Use `islice` only when you need lazy iteration over a range without allocating result storage.",
                 ],
                 "winner": {"label": "list[start:stop]", "detail": f"{islice_points[-1] / slice_points[-1]:.1f}x faster than list(islice(...)) @ 100k"},
@@ -639,7 +639,17 @@ def build_dict_string_topic() -> dict:
             final_metrics = {"int_time": int_time, "str_time": str_time}
 
         assert final_metrics is not None
-        ratio = final_metrics["str_time"] / final_metrics["int_time"]
+        int_time = final_metrics["int_time"]
+        str_time = final_metrics["str_time"]
+        if int_time <= str_time:
+            faster_label = "int keys"
+            slower_label = "str keys"
+            gap_ratio = str_time / int_time
+        else:
+            faster_label = "str keys"
+            slower_label = "int keys"
+            gap_ratio = int_time / str_time
+
         presets[lookup_kind] = {
             "chartKind": "line",
             "chartTitle": f"{lookup_kind.title()} time by key type",
@@ -650,23 +660,23 @@ def build_dict_string_topic() -> dict:
                 {"label": "str key lookup", "color": COLORS["red"], "values": dict_str},
             ],
             "metrics": [
-                {"label": "Faster key type", "value": f"int keys ({ratio:.1f}x faster @ 1M)"},
-                {"label": "Speed gap @ 1M", "value": f"{ratio:.1f}x"},
+                {"label": "Faster key type", "value": f"{faster_label} ({gap_ratio:.1f}x faster @ 1M)"},
+                {"label": "Speed gap @ 1M", "value": f"{gap_ratio:.1f}x"},
                 {"label": "Largest mapping tested", "value": "1,000,000 keys"},
             ],
             "notes": [
                 "**What this tests** — dict lookup with integer keys vs string keys on 1M-entry dicts. Both keys are hashable and go through the same hash-table algorithm, but the equality check after the hash match differs.",
-                "**Why int keys won** — integer equality is a single C integer comparison (`Py_EQ` compares the raw `PyLong` value). String equality requires a full character-by-character comparison via `PyUnicode_Compare`, which can be expensive for long or uninterned strings.",
-                f"**The surprise** — the gap is only {ratio:.1f}x. Despite string comparisons being more expensive, the hash table's probe sequence rarely needs multiple equality checks per lookup. The hash collision rate is low, so the extra string cost is diluted.",
-                "**Takeaway** — int keys are marginally faster, but the difference is small for real workloads. Choose key types based on domain semantics (user IDs as ints, names as strings) rather than micro-optimizing lookup speed.",
+                f"**Why {faster_label} won here** — CPython has very fast C paths for both key types. Integer hashes and equality are cheap, while Unicode-key dictionaries can use specialized string lookup paths and cached string hashes after the first lookup. This benchmark uses `str(i)` keys, not interned string literals, so the result should not be explained by automatic interning or PEP 659 bytecode specialization.",
+                f"**The surprise** — the gap is only {gap_ratio:.1f}x. The hash table's probe sequence rarely needs multiple equality checks per lookup, so both paths are dominated by hash-table probing and cache behavior rather than the raw equality operation alone.",
+                "**Takeaway** — this is a small CPython-specific microbenchmark result, not a design rule. Choose key types based on domain semantics (user IDs as ints, names as strings) rather than micro-optimizing lookup speed.",
             ],
-            "winner": {"label": "int keys", "detail": f"{ratio:.1f}x faster than string keys @ 1M"},
+            "winner": {"label": faster_label, "detail": f"{gap_ratio:.1f}x faster than {slower_label} @ 1M"},
             "guideRef": "dict-hash-tables",
         }
 
     return {
         "title": "Measured dict lookup by key type",
-        "summary": "This notebook compares dict lookup speed when keys are integers versus strings. Both are hash-table lookups, but string keys require string-equality checks that can be more expensive than integer equality.",
+        "summary": "This notebook compares dict lookup speed when keys are integers versus strings. Both are hash-table lookups, but CPython uses different hashing and equality paths for the two key types.",
         "controls": [
             {
                 "id": "lookup",
@@ -719,14 +729,14 @@ def build_set_algebra_topic() -> dict:
                 ],
                 "metrics": [
                     {"label": "Faster operation @ 1M", "value": "intersection" if intersection_points[-1] < union_points[-1] else "union"},
-                    {"label": "Largest set size", "value": f"{final_size} elements each"},
+                    {"label": "Largest set size", "value": f"{final_size // 2} elements each"},
                     {"label": "Combined memory @ 1M", "value": f"{set_memory[-1]:.0f} KiB for both sets"},
                 ],
                 "notes": [
                     "**What this tests** — set intersection (`a & b`) vs union (`a | b`) on two disjoint sets of equal size. Both are hash-table operations, but they iterate differently.",
-                    "**Why intersection won** — intersection iterates the smaller set and probes each element in the larger set. It can short-circuit: if an element is not in the other set, it is skipped. Union must iterate and insert every element from both sets into a new set, which always requires two full iterations.",
-                    f"**The surprise** — intersection is still faster even on disjoint sets (no early filtering). The gap ({gap_ratio:.1f}x) comes from union doing twice as many insertions: every element from both sets must be hashed and placed into the result table.",
-                    "**Takeaway** — for set algebra, intersection is the cheapest operation because it can short-circuit. Union always requires a full pass over both inputs. Memory for two sets of 500k elements each is ~{set_memory[-1]:.0f} KiB combined.",
+                    "**Why intersection won** — intersection iterates one input and probes the other. For a disjoint pair, every probe misses and nothing is inserted into the result. Union must build a new result containing every element from both inputs.",
+                    f"**The surprise** — intersection is still faster even when the sets are disjoint. The gap ({gap_ratio:.1f}x) comes from avoiding result insertions: union must hash and place every element from both sets into the result table.",
+                    "**Takeaway** — intersection is often cheaper than union when the result is small, because it can skip non-members instead of inserting them. Union always has to materialize all elements from both inputs. Memory for two sets of 500k elements each is ~{set_memory[-1]:.0f} KiB combined.",
                 ],
                 "winner": {"label": "intersection (a & b)", "detail": f"{gap_ratio:.1f}x faster than union @ 1M"},
                 "guideRef": "sets-membership-views",

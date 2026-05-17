@@ -945,10 +945,10 @@ function renderAsyncBoundaryDiagram(rc: RoughSVG, svg: SVGSVGElement) {
   appendNodes(svg, rc.rectangle(44, 96, 146, 50, { seed: 620, stroke: TITLE_COLOR, strokeWidth: 2.2, fill: "rgba(255,255,255,0)", roughness: 1.15, bowing: 1.1 }))
   appendNodes(svg, createAnchoredText(117, 106, "awaitable API", 14, TITLE_COLOR, "var(--font-board-display)", "middle"))
   appendNodes(svg, createAnchoredText(117, 126, "coroutine / awaitable", 10, MARKER_COLORS.black, "var(--font-board-body)", "middle"))
-  appendNodes(svg, rc.path("M 190 121 C 214 108, 226 100, 248 92", { seed: 621, stroke: GOOD_COLOR, strokeWidth: 2, fill: "none", roughness: 1.2, bowing: 1.3 }))
-  appendNodes(svg, createArrowHead(rc, 248, 92, "right", GOOD_COLOR, 622))
-  appendNodes(svg, rc.path("M 190 121 C 214 140, 226 158, 248 166", { seed: 623, stroke: ACCENT_COLOR, strokeWidth: 2, fill: "none", roughness: 1.2, bowing: 1.3 }))
-  appendNodes(svg, createArrowHead(rc, 248, 166, "right", ACCENT_COLOR, 624))
+  appendNodes(svg, rc.path("M 190 121 C 214 108, 226 100, 255 92", { seed: 621, stroke: GOOD_COLOR, strokeWidth: 2, fill: "none", roughness: 1.2, bowing: 1.3 }))
+  appendNodes(svg, createArrowHead(rc, 255, 92, "right", GOOD_COLOR, 622))
+  appendNodes(svg, rc.path("M 190 121 C 214 140, 226 158, 255 166", { seed: 623, stroke: ACCENT_COLOR, strokeWidth: 2, fill: "none", roughness: 1.2, bowing: 1.3 }))
+  appendNodes(svg, createArrowHead(rc, 255, 166, "right", ACCENT_COLOR, 624))
   appendNodes(svg, rc.rectangle(256, 66, 148, 50, { seed: 625, stroke: GOOD_COLOR, strokeWidth: 2.2, fill: "rgba(209, 250, 229, 0.25)", roughness: 1.15, bowing: 1.1 }))
   appendNodes(svg, createAnchoredText(330, 76, "I/O-friendly", 14, GOOD_COLOR, "var(--font-board-display)", "middle"))
   appendNodes(svg, createAnchoredText(330, 98, "await sleeps / reads", 10, MARKER_COLORS.black, "var(--font-board-body)", "middle"))
@@ -959,26 +959,24 @@ function renderAsyncBoundaryDiagram(rc: RoughSVG, svg: SVGSVGElement) {
 }
 
 function renderTaskTreeDiagram(rc: RoughSVG, svg: SVGSVGElement) {
-  appendNodes(svg, rc.rectangle(238, 54, 132, 44, { seed: 630, stroke: TITLE_COLOR, strokeWidth: 2.2, fill: "rgba(255,255,255,0)", roughness: 1.15, bowing: 1.1 }))
-  appendNodes(svg, createAnchoredText(304, 80, "TaskGroup", 16, TITLE_COLOR, "var(--font-board-display)", "middle"))
-  ;[238, 304, 370].forEach((x, i) => {
-    appendNodes(svg, rc.path(`M 304 98 C 304 110, ${x} 124, ${x} 134`, { seed: 631 + i, stroke: ACCENT_COLOR, strokeWidth: 2, fill: "none", roughness: 1.2, bowing: 1.3 }))
-    appendNodes(svg, createArrowHead(rc, x, 134, "down", ACCENT_COLOR, 634 + i))
+  appendNodes(svg, rc.rectangle(238, 50, 132, 44, { seed: 630, stroke: TITLE_COLOR, strokeWidth: 2.2, fill: "rgba(255,255,255,0)", roughness: 1.15, bowing: 1.1 }))
+  appendNodes(svg, createAnchoredText(304, 70, "TaskGroup", 15, TITLE_COLOR, "var(--font-board-display)", "middle"))
+  appendNodes(svg, createAnchoredText(304, 88, "structured concurrency", 10, MARKER_COLORS.black, "var(--font-board-body)", "middle"))
+  const childCenters = [222, 304, 386]
+  childCenters.forEach((cx, i) => {
+    appendNodes(svg, rc.path(`M 304 94 C 304 106, ${cx} 116, ${cx} 128`, { seed: 631 + i, stroke: ACCENT_COLOR, strokeWidth: 2, fill: "none", roughness: 0.4, bowing: 0.3 }))
+    appendNodes(svg, createArrowHead(rc, cx, 128, "down", ACCENT_COLOR, 631 + i))
+    const color = i === 1 ? ALT_COLOR : GOOD_COLOR
+    const x = cx - 41
+    appendNodes(svg, rc.rectangle(x, 132, 82, 44, { seed: 637 + i, stroke: color, strokeWidth: 2.2, fill: "rgba(255,255,255,0)", roughness: 1.15, bowing: 1.1 }))
+    appendNodes(svg, createAnchoredText(cx, 152, ["child A", "child B", "child C"][i], 13, color, "var(--font-board-body)", "middle"))
+    appendNodes(svg, createAnchoredText(cx, 170, "work()", 10, MARKER_COLORS.black, "var(--font-board-body)", "middle"))
   })
-  const children = [
-    { label: "child A", x: 180, color: GOOD_COLOR },
-    { label: "child B", x: 268, color: ALT_COLOR },
-    { label: "child C", x: 356, color: GOOD_COLOR },
-  ]
-  children.forEach((ch) => {
-    appendNodes(svg, rc.rectangle(ch.x, 138, 114, 42, { seed: 637 + children.indexOf(ch), stroke: ch.color, strokeWidth: 2.2, fill: "rgba(255,255,255,0)", roughness: 1.15, bowing: 1.1 }))
-    appendNodes(svg, createAnchoredText(ch.x + 57, 163, ch.label, 13, ch.color, "var(--font-board-body)", "middle"))
-  })
-  appendNodes(svg, createAnchoredText(304, 216, "structured concurrency", 13, TITLE_COLOR, "var(--font-board-body)", "middle"))
-  appendNodes(svg, createAnchoredText(304, 234, "failure propagates to siblings", 11, ACCENT_COLOR, "var(--font-board-body)", "middle"))
-  appendNodes(svg, rc.path("M 304 182 C 304 192, 304 200, 304 212", { seed: 640, stroke: TITLE_COLOR, strokeWidth: 1.6, fill: "none", roughness: 1.2, bowing: 1.3 }))
-  appendNodes(svg, createArrowHead(rc, 304, 212, "down", TITLE_COLOR, 641))
-  appendNodes(svg, createAnchoredText(304, 260, "tasks need an owner or they become cleanup debt", 11, ACCENT_COLOR, "var(--font-board-body)", "middle"))
+  appendNodes(svg, rc.path("M 304 176 C 304 186, 304 194, 304 218", { seed: 640, stroke: TITLE_COLOR, strokeWidth: 1.6, fill: "none", roughness: 0.4, bowing: 0.3 }))
+  appendNodes(svg, createArrowHead(rc, 304, 218, "down", TITLE_COLOR, 6450))
+  appendNodes(svg, rc.rectangle(154, 220, 300, 36, { seed: 641, stroke: ACCENT_COLOR, strokeWidth: 2, fill: "rgba(255, 241, 118, 0.2)", roughness: 1.15, bowing: 1.1 }))
+  appendNodes(svg, createAnchoredText(304, 240, "⚠  TaskGroup does not limit fan-out", 11, ACCENT_COLOR, "var(--font-board-body)", "middle"))
+  appendNodes(svg, createAnchoredText(304, 274, "→  combine with Semaphore(N) to bound concurrency", 11, GOOD_COLOR, "var(--font-board-body)", "middle"))
 }
 
 function renderLogPipelineDiagram(rc: RoughSVG, svg: SVGSVGElement) {

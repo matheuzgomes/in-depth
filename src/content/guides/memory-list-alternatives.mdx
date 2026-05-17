@@ -32,7 +32,7 @@ Measured locally on CPython 3.12.3, 64-bit Linux:
 - `sys.getsizeof((1.0,) * 1000)` -> `8040` bytes for the tuple container only
 - `sys.getsizeof(array("d", [1.0] * 1000))` -> `8080` bytes total for the packed doubles
 
-Those list and tuple measurements do **not** include the `1000` separate `float` objects. The array measurement does include the raw numeric payload. That is why the real memory gap becomes dramatic for numeric workloads.
+Those list and tuple measurements do **not** include the `float` objects referenced by the elements. The array measurement does include the raw numeric payload. That is why the real memory gap becomes dramatic for numeric workloads.
 
 ```python
 # [CURRENT - 3.10-3.14] Works on Python 3.x
@@ -41,9 +41,13 @@ import sys
 from array import array
 
 n = 10
-list_total = sys.getsizeof([1.0] * n) + n * sys.getsizeof(1.0)
-tuple_total = sys.getsizeof((1.0,) * n) + n * sys.getsizeof(1.0)
-array_total = sys.getsizeof(array("d", [1.0] * n))
+values = [float(i) for i in range(n)]
+list_total = sys.getsizeof(values) + sum(sys.getsizeof(v) for v in values)
+
+values_t = tuple(float(i) for i in range(n))
+tuple_total = sys.getsizeof(values_t) + sum(sys.getsizeof(v) for v in values_t)
+
+array_total = sys.getsizeof(array("d", [float(i) for i in range(n)]))
 
 print(list_total)   # 376
 print(tuple_total)  # 360
