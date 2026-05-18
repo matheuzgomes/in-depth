@@ -98,12 +98,25 @@ export default function RootLayout({
     inLanguage: "en-US",
   }
 
+  const orgJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: "Pynsights",
+    url: baseUrl,
+    description:
+      "Interactive Python education covering CPython internals, data structures, async, concurrency, and production patterns.",
+  }
+
   return (
     <html lang="en" className={`${inter.variable} ${playfairDisplay.variable} ${jetbrainsMono.variable} ${caveat.variable} ${patrickHand.variable}`}>
       <body>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(siteJsonLd) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}
         />
         {children}
         <Analytics />
